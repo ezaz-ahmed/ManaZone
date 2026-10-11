@@ -66,7 +66,7 @@ The workflow then does the following:
 1. Decodes the keystore.
 2. Builds with `versionName` set to the tag without its `v` and `versionCode` set to the workflow run number.
 3. Verifies the signature with `apksigner`.
-4. Publishes a GitHub release with generated notes and `manazone-v1.0.0.apk` attached.
+4. Publishes a GitHub release with generated notes and `Manazone.apk` attached.
 
 ## Architecture
 
