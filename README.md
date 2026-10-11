@@ -30,6 +30,44 @@ Checks:
 
 The instrumented tests run `cmd notification allow_dnd/disallow_dnd/set_dnd` and `appwidget grantbind` on the device. They clear Manazone's data.
 
+## Releasing
+
+The release build is signed when all four signing values are available. Environment variables take precedence over `local.properties`. If any value is missing, `assembleRelease` still succeeds but produces `app-release-unsigned.apk`.
+
+| Environment variable | `local.properties` key |
+|---|---|
+| `MANAZONE_KEYSTORE_PATH` | `manazone.keystore.path` |
+| `MANAZONE_KEYSTORE_PASSWORD` | `manazone.keystore.password` |
+| `MANAZONE_KEY_ALIAS` | `manazone.key.alias` |
+| `MANAZONE_KEY_PASSWORD` | `manazone.key.password` |
+
+A relative keystore path is resolved from the project root. `MANAZONE_VERSION_NAME` and `MANAZONE_VERSION_CODE` override the default `1.0` / `1`.
+
+Create a keystore once, keep it out of git (`*.jks` is ignored), and back it up. You can't ship updates to existing installs without it.
+
+```sh
+keytool -genkeypair -v -keystore manazone-release.jks -alias manazone \
+  -keyalg RSA -keysize 4096 -validity 10000
+```
+
+**Signed builds on GitHub:** `.github/workflows/release.yml` runs on every pushed `v*` tag. Add these repository secrets:
+
+- `MANAZONE_KEYSTORE_BASE64`: the output of `base64 -w0 manazone-release.jks`
+- `MANAZONE_KEYSTORE_PASSWORD`, `MANAZONE_KEY_ALIAS`, `MANAZONE_KEY_PASSWORD`
+
+Then tag and push:
+
+```sh
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The workflow then does the following:
+1. Decodes the keystore.
+2. Builds with `versionName` set to the tag without its `v` and `versionCode` set to the workflow run number.
+3. Verifies the signature with `apksigner`.
+4. Publishes a GitHub release with generated notes and `manazone-v1.0.0.apk` attached.
+
 ## Architecture
 
 The app is a single module with one activity. The packages are grouped by concern:

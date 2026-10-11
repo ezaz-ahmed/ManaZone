@@ -1,8 +1,27 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
 }
+
+// Release signing: environment variables (CI) take precedence over local.properties (local builds).
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.isFile) file.inputStream().use(::load)
+}
+
+fun signingValue(env: String, property: String): String? =
+    providers.environmentVariable(env).orNull?.takeIf { it.isNotBlank() }
+        ?: localProperties.getProperty(property)?.takeIf { it.isNotBlank() }
+
+val releaseKeystorePath = signingValue("MANAZONE_KEYSTORE_PATH", "manazone.keystore.path")
+val releaseKeystorePassword = signingValue("MANAZONE_KEYSTORE_PASSWORD", "manazone.keystore.password")
+val releaseKeyAlias = signingValue("MANAZONE_KEY_ALIAS", "manazone.key.alias")
+val releaseKeyPassword = signingValue("MANAZONE_KEY_PASSWORD", "manazone.key.password")
+val hasReleaseSigning = listOf(releaseKeystorePath, releaseKeystorePassword, releaseKeyAlias, releaseKeyPassword)
+    .all { it != null }
 
 android {
     namespace = "dev.ezaz.manazone"
@@ -14,14 +33,28 @@ android {
         applicationId = "dev.ezaz.manazone"
         minSdk = 30
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        // CI derives these from the release tag; local builds keep the defaults.
+        versionCode = providers.environmentVariable("MANAZONE_VERSION_CODE").orNull?.toIntOrNull() ?: 1
+        versionName = providers.environmentVariable("MANAZONE_VERSION_NAME").orNull ?: "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = rootProject.file(releaseKeystorePath!!)
+                storePassword = releaseKeystorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // Without signing credentials the release APK is built unsigned rather than failing.
+            if (hasReleaseSigning) signingConfig = signingConfigs.getByName("release")
             optimization {
                 enable = true
                 packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
