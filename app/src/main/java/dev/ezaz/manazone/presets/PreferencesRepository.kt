@@ -1,0 +1,64 @@
+package dev.ezaz.manazone.presets
+
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import java.io.IOException
+
+data class UserSettings(
+    val vibrationEnabled: Boolean = true,
+    val soundEnabled: Boolean = false,
+    val dndEnabled: Boolean = false,
+)
+
+private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "manazone_prefs")
+
+/** Presets and settings, persisted in Preferences DataStore. */
+class PreferencesRepository(context: Context) {
+    private val store = context.applicationContext.dataStore
+
+    private val data: Flow<Preferences> = store.data.catch { e ->
+        if (e is IOException) emit(emptyPreferences()) else throw e
+    }
+
+    val presets: Flow<List<Int>> = data.map { prefs ->
+        val raw = prefs[PRESETS] ?: return@map DEFAULT_PRESETS
+        PresetRules.sanitize(raw.split(',').mapNotNull { it.trim().toIntOrNull() })
+    }
+
+    val settings: Flow<UserSettings> = data.map { prefs ->
+        UserSettings(
+            vibrationEnabled = prefs[VIBRATION] ?: true,
+            soundEnabled = prefs[SOUND] ?: false,
+            dndEnabled = prefs[DND] ?: false,
+        )
+    }
+
+    suspend fun currentSettings(): UserSettings = settings.first()
+
+    suspend fun setPresets(presets: List<Int>) {
+        store.edit { it[PRESETS] = presets.joinToString(",") }
+    }
+
+    suspend fun setVibration(enabled: Boolean) = store.edit { it[VIBRATION] = enabled }
+    suspend fun setSound(enabled: Boolean) = store.edit { it[SOUND] = enabled }
+    suspend fun setDnd(enabled: Boolean) = store.edit { it[DND] = enabled }
+
+    suspend fun clear() = store.edit { it.clear() }
+
+    private companion object {
+        val PRESETS = stringPreferencesKey("presets")
+        val VIBRATION = booleanPreferencesKey("completion_vibration")
+        val SOUND = booleanPreferencesKey("completion_sound")
+        val DND = booleanPreferencesKey("dnd_enabled")
+    }
+}

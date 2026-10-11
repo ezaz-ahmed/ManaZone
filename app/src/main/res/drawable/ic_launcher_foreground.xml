@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Manazone mark: an emerald progress arc around a single point of focus. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M54,32 A22,22 0 1,1 34.95,43"
+        android:strokeWidth="3.5"
+        android:strokeColor="#FF34C48B"
+        android:strokeLineCap="round" />
+    <path
+        android:fillColor="#FF34C48B"
+        android:pathData="M54,54m-3.5,0a3.5,3.5 0,1 1,7 0a3.5,3.5 0,1 1,-7 0" />
+</vector>

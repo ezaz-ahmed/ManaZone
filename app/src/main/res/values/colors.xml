@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="emerald">#FF34C48B</color>
+    <color name="emerald_dim">#FF1E7351</color>
+    <color name="hairline">#FF1E2220</color>
+    <color name="text_secondary">#FF8E9390</color>
+</resources>

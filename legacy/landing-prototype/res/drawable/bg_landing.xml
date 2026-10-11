@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape>
+            <gradient
+                android:angle="270"
+                android:centerColor="#FF120B33"
+                android:endColor="@color/mana_night"
+                android:startColor="@color/mana_deep" />
+        </shape>
+    </item>
+    <!-- Soft violet glow behind the orb -->
+    <item>
+        <shape>
+            <gradient
+                android:centerX="0.5"
+                android:centerY="0.34"
+                android:endColor="#00553FD0"
+                android:gradientRadius="340dp"
+                android:startColor="#66553FD0"
+                android:type="radial" />
+        </shape>
+    </item>
+    <!-- Faint cyan glow in the bottom corner -->
+    <item>
+        <shape>
+            <gradient
+                android:centerX="0.9"
+                android:centerY="0.95"
+                android:endColor="#005EE7FF"
+                android:gradientRadius="280dp"
+                android:startColor="#245EE7FF"
+                android:type="radial" />
+        </shape>
+    </item>
+</layer-list>

@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">ManaZone</string>
+
+    <string name="greeting_morning">Good morning</string>
+    <string name="greeting_afternoon">Good afternoon</string>
+    <string name="greeting_evening">Good evening</string>
+    <string name="greeting_night">Hello, night owl</string>
+    <string name="welcome_to">Welcome to</string>
+    <string name="welcome_subtitle">Your space to recharge, focus, and grow your energy, one day at a time.</string>
+    <string name="get_started">Get Started</string>
+    <string name="coming_soon">Your journey begins soon ✦</string>
+</resources>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 1x1 widget. Launchers decide the exact cell size; 40dp is the documented 1-cell minimum. -->
+<!-- previewLayout and targetCell* are API 31+ and are simply ignored on Android 11. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="UnusedAttribute"
+    android:configure="dev.ezaz.manazone.widget.WidgetConfigActivity"
+    android:description="@string/widget_description"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:minWidth="40dp"
+    android:minHeight="40dp"
+    android:previewLayout="@layout/widget_preview"
+    android:resizeMode="none"
+    android:targetCellWidth="1"
+    android:targetCellHeight="1"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable" />

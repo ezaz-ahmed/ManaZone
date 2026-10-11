@@ -1,0 +1,108 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "e4c5544316c4a9212ccbe562caba14d0",
+    "entities": [
+      {
+        "tableName": "sessions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `plannedMillis` INTEGER NOT NULL, `startWallMillis` INTEGER NOT NULL, `anchorElapsedMillis` INTEGER NOT NULL, `anchorBootCount` INTEGER NOT NULL, `status` TEXT NOT NULL, `endWallMillis` INTEGER, `focusedMillis` INTEGER NOT NULL, `completionSeen` INTEGER NOT NULL, `dndPreviousFilter` INTEGER, `dndAppliedFilter` INTEGER)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "plannedMillis",
+            "columnName": "plannedMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startWallMillis",
+            "columnName": "startWallMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "anchorElapsedMillis",
+            "columnName": "anchorElapsedMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "anchorBootCount",
+            "columnName": "anchorBootCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endWallMillis",
+            "columnName": "endWallMillis",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "focusedMillis",
+            "columnName": "focusedMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "completionSeen",
+            "columnName": "completionSeen",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dndPreviousFilter",
+            "columnName": "dndPreviousFilter",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "dndAppliedFilter",
+            "columnName": "dndAppliedFilter",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_sessions_status",
+            "unique": false,
+            "columnNames": [
+              "status"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_sessions_status` ON `${TABLE_NAME}` (`status`)"
+          },
+          {
+            "name": "index_sessions_endWallMillis",
+            "unique": false,
+            "columnNames": [
+              "endWallMillis"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_sessions_endWallMillis` ON `${TABLE_NAME}` (`endWallMillis`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e4c5544316c4a9212ccbe562caba14d0')"
+    ]
+  }
+}

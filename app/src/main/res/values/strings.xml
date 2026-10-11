@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Manazone</string>
+    <string name="widget_name">Focus</string>
+    <string name="widget_description">Start a focus session with one tap</string>
+    <string name="widget_unconfigured">Manazone widget. Choose a duration.</string>
+    <string name="widget_focusing_description">Focus session running. Tap to return.</string>
+    <string name="widget_start_description">Start %1$s focus</string>
+    <string name="widget_preview_value" translatable="false">25</string>
+    <string name="widget_preview_unit">min</string>
+</resources>

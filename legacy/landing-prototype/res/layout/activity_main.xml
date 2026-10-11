@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_landing"
+    android:clipChildren="false"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:paddingHorizontal="28dp"
+    android:paddingTop="24dp"
+    android:paddingBottom="32dp">
+
+    <Space
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <FrameLayout
+        android:id="@+id/orb"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:clipChildren="false">
+
+        <View
+            android:id="@+id/orbGlow"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_orb_glow" />
+
+        <FrameLayout
+            android:id="@+id/orbCore"
+            android:layout_width="108dp"
+            android:layout_height="108dp"
+            android:layout_gravity="center"
+            android:background="@drawable/bg_orb_core"
+            android:elevation="12dp">
+
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_mana_sparkle" />
+        </FrameLayout>
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/greeting"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.2"
+        android:textAllCaps="true"
+        android:textColor="@color/mana_cyan"
+        android:textSize="13sp" />
+
+    <TextView
+        android:id="@+id/welcomeTo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:fontFamily="sans-serif-light"
+        android:text="@string/welcome_to"
+        android:textColor="@color/white"
+        android:textSize="30sp" />
+
+    <TextView
+        android:id="@+id/brand"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="sans-serif-black"
+        android:text="@string/app_name"
+        android:textColor="@color/white"
+        android:textSize="48sp" />
+
+    <TextView
+        android:id="@+id/subtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:gravity="center"
+        android:lineSpacingMultiplier="1.3"
+        android:maxWidth="320dp"
+        android:text="@string/welcome_subtitle"
+        android:textColor="@color/mana_text_muted"
+        android:textSize="16sp" />
+
+    <Space
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_weight="1.3" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/getStarted"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:fontFamily="sans-serif-medium"
+        android:letterSpacing="0.04"
+        android:text="@string/get_started"
+        android:textAllCaps="false"
+        android:textColor="@color/white"
+        android:textSize="17sp"
+        app:backgroundTint="@color/mana_violet"
+        app:cornerRadius="30dp"
+        app:icon="@drawable/ic_mana_sparkle"
+        app:iconGravity="textEnd"
+        app:iconPadding="10dp"
+        app:iconSize="18dp"
+        app:iconTint="@color/white"
+        app:rippleColor="#40FFFFFF" />
+</LinearLayout>
