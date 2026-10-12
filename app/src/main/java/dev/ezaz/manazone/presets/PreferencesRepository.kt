@@ -29,6 +29,8 @@ data class UserSettings(
     val soundId: String = "ding_dong",
     /** Completion sound loudness, 10..100 percent. */
     val soundVolume: Int = 80,
+    /** Slowly shifts the running clock to prevent burn-in; only useful on OLED screens. */
+    val oledProtection: Boolean = true,
 )
 
 const val DEFAULT_CLOCK_COLOR = 0xFF34C48B.toInt()
@@ -59,6 +61,7 @@ class PreferencesRepository(context: Context) {
             clockStyle = prefs[CLOCK_STYLE] ?: "CLAY",
             soundId = prefs[SOUND_ID] ?: "ding_dong",
             soundVolume = (prefs[SOUND_VOLUME] ?: 80).coerceIn(10, 100),
+            oledProtection = prefs[OLED_PROTECTION] ?: true,
         )
     }
 
@@ -78,6 +81,7 @@ class PreferencesRepository(context: Context) {
     suspend fun setClockStyle(style: String) = store.edit { it[CLOCK_STYLE] = style }
     suspend fun setSoundId(id: String) = store.edit { it[SOUND_ID] = id }
     suspend fun setSoundVolume(percent: Int) = store.edit { it[SOUND_VOLUME] = percent.coerceIn(10, 100) }
+    suspend fun setOledProtection(enabled: Boolean) = store.edit { it[OLED_PROTECTION] = enabled }
 
     suspend fun notificationPermissionAsked(): Boolean = data.first()[NOTIFICATION_ASKED] ?: false
     suspend fun setNotificationPermissionAsked() = store.edit { it[NOTIFICATION_ASKED] = true }
@@ -107,6 +111,7 @@ class PreferencesRepository(context: Context) {
         val CLOCK_STYLE = stringPreferencesKey("clock_style")
         val SOUND_ID = stringPreferencesKey("completion_sound_id")
         val SOUND_VOLUME = intPreferencesKey("completion_sound_volume")
+        val OLED_PROTECTION = booleanPreferencesKey("oled_protection")
         val DND_SCAN_READY = booleanPreferencesKey("dnd_orphan_scan_ready")
         val START_TOKEN = stringPreferencesKey("start_token")
         val NOTIFICATION_ASKED = booleanPreferencesKey("notification_permission_asked")

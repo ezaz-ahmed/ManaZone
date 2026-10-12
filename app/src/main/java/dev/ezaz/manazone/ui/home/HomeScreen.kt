@@ -90,7 +90,7 @@ fun HomeScreen(vm: MainViewModel) {
         if (landscape) {
             Row(Modifier.fillMaxSize().padding(horizontal = 40.dp, vertical = 24.dp)) {
                 Column(Modifier.weight(1f).fillMaxSize()) {
-                    Header(onSettings = { vm.navigate(Route.Settings) })
+                    Header(onStats = { vm.navigate(Route.Stats) }, onSettings = { vm.navigate(Route.Settings) })
                     Spacer(Modifier.weight(1f))
                     Stats(stats)
                     Spacer(Modifier.height(20.dp))
@@ -106,7 +106,7 @@ fun HomeScreen(vm: MainViewModel) {
             Column(
                 Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 28.dp, vertical = 16.dp),
             ) {
-                Header(onSettings = { vm.navigate(Route.Settings) })
+                Header(onStats = { vm.navigate(Route.Stats) }, onSettings = { vm.navigate(Route.Settings) })
                 Spacer(Modifier.height(56.dp))
                 Stats(stats)
                 Spacer(Modifier.height(24.dp))
@@ -120,9 +120,12 @@ fun HomeScreen(vm: MainViewModel) {
 }
 
 @Composable
-private fun Header(onSettings: () -> Unit) {
+private fun Header(onStats: () -> Unit, onSettings: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Wordmark(Modifier.weight(1f))
+        IconButton(onClick = onStats, modifier = Modifier.size(48.dp)) {
+            Icon(painterResource(R.drawable.ic_stats), contentDescription = "Stats", tint = Mz.TextSecondary)
+        }
         IconButton(onClick = onSettings, modifier = Modifier.size(48.dp)) {
             Icon(painterResource(R.drawable.ic_tune), contentDescription = "Settings", tint = Mz.TextSecondary)
         }

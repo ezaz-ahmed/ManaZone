@@ -201,6 +201,13 @@ fun SettingsScreen(vm: MainViewModel) {
             modifier = Modifier.padding(horizontal = 8.dp),
         )
 
+        ToggleRow(
+            "OLED protection",
+            "Slowly moves the clock to prevent burn-in. Turn off on LCD screens to keep it centered.",
+            settings.oledProtection,
+            vm::setOledProtection,
+        )
+
         Section("Completion")
         ToggleRow("Vibration", "A short double pulse when a session completes", settings.vibrationEnabled, vm::setVibration)
         ToggleRow("Sound", "Plays when a session completes. Follows your ringer and Do Not Disturb settings.", settings.soundEnabled, vm::setSound)

@@ -1,138 +1,113 @@
 package dev.ezaz.manazone.widget
 
+import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import android.util.TypedValue
+import android.widget.RemoteViews
+import androidx.core.content.edit
 import androidx.core.net.toUri
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.glance.GlanceId
-import androidx.glance.GlanceModifier
-import androidx.glance.ImageProvider
-import androidx.glance.action.clickable
-import androidx.glance.appwidget.GlanceAppWidget
-import androidx.glance.appwidget.GlanceAppWidgetManager
-import androidx.glance.appwidget.GlanceAppWidgetReceiver
-import androidx.glance.appwidget.action.actionStartActivity
-import androidx.glance.appwidget.provideContent
-import androidx.glance.appwidget.state.updateAppWidgetState
-import androidx.glance.appwidget.updateAll
-import androidx.glance.background
-import androidx.glance.currentState
-import androidx.glance.layout.Alignment
-import androidx.glance.layout.Column
-import androidx.glance.layout.fillMaxSize
-import androidx.glance.layout.padding
-import androidx.glance.semantics.contentDescription
-import androidx.glance.semantics.semantics
-import androidx.glance.state.GlanceStateDefinition
-import androidx.glance.state.PreferencesGlanceStateDefinition
-import androidx.glance.text.FontWeight
-import androidx.glance.text.Text
-import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
 import dev.ezaz.manazone.MainActivity
 import dev.ezaz.manazone.ManazoneApp
 import dev.ezaz.manazone.R
 import dev.ezaz.manazone.presets.compactDuration
 import dev.ezaz.manazone.presets.formatDuration
 import dev.ezaz.manazone.session.SessionTiming
+import kotlinx.coroutines.launch
 
 /**
- * A 1×1 launcher widget bound to one duration. Each widget instance stores its own duration in
- * Glance per-widget state, so several widgets with different durations can coexist. The widget
- * never runs a timer itself; tapping it hands off to [MainActivity], which asks the
- * SessionManager to start (or return to) the single active session.
+ * A 1×1 launcher widget bound to one duration, drawn with plain RemoteViews (no Glance, no
+ * WorkManager) so it costs no background machinery. Each widget instance stores its own duration, so
+ * several widgets with different durations can coexist. The widget never runs a timer itself;
+ * tapping it hands off to [MainActivity], which asks the SessionManager to start (or return to) the
+ * single active session.
  */
-class FocusWidget : GlanceAppWidget() {
+object FocusWidget {
+    private const val PREFS = "focus_widgets"
+    private const val EMERALD = 0xFF34C48B.toInt()
+    private const val FOCUSING_TEXT = 0xFFE8F5EE.toInt()
+    private const val MUTED = 0xFF8A8F8C.toInt()
 
-    override val stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
+    fun launchIntent(context: Context, minutes: Int?, token: String): Intent =
+        Intent(context, MainActivity::class.java).apply {
+            if (minutes != null) {
+                action = MainActivity.ACTION_START_FOCUS
+                putExtra(MainActivity.EXTRA_MINUTES, minutes)
+                putExtra(MainActivity.EXTRA_TOKEN, token)
+                // Unique data keeps PendingIntents for different durations distinct.
+                data = "manazone://focus/$minutes".toUri()
+            }
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
 
-    override suspend fun provideGlance(context: Context, id: GlanceId) {
+    fun getMinutes(context: Context, appWidgetId: Int): Int? =
+        prefs(context).takeIf { it.contains(key(appWidgetId)) }?.getInt(key(appWidgetId), 0)
+
+    suspend fun setMinutes(context: Context, appWidgetId: Int, minutes: Int) {
+        prefs(context).edit(commit = true) { putInt(key(appWidgetId), minutes) }
+        update(context, intArrayOf(appWidgetId))
+    }
+
+    fun forget(context: Context, appWidgetIds: IntArray) {
+        prefs(context).edit { appWidgetIds.forEach { remove(key(it)) } }
+    }
+
+    suspend fun refreshAll(context: Context) {
+        val ids = AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, FocusWidgetReceiver::class.java))
+        if (ids.isNotEmpty()) update(context, ids)
+    }
+
+    suspend fun update(context: Context, appWidgetIds: IntArray) {
         val container = (context.applicationContext as ManazoneApp).container
         val token = container.preferences.startToken()
         val focusing = runCatching {
             container.sessionStore.active()?.let { !SessionTiming.isElapsed(it, container.time.now()) } ?: false
         }.getOrDefault(false)
-        provideContent {
-            val minutes = currentState<Preferences>()[MINUTES_KEY]
-            WidgetContent(context, minutes, focusing, token)
-        }
+        val manager = AppWidgetManager.getInstance(context)
+        for (id in appWidgetIds) manager.updateAppWidget(id, views(context, id, getMinutes(context, id), focusing, token))
     }
 
-    @Composable
-    private fun WidgetContent(context: Context, minutes: Int?, focusing: Boolean, token: String) {
-        val background = if (focusing) R.drawable.widget_background_active else R.drawable.widget_background
-        val (value, unit) = minutes?.let(::compactDuration) ?: ("–" to "set")
+    private fun views(context: Context, id: Int, minutes: Int?, focusing: Boolean, token: String): RemoteViews {
+        val (value, unit) = minutes?.let(::compactDuration) ?: (context.getString(R.string.widget_unset_value) to context.getString(R.string.widget_unset_unit))
         val description = when {
             minutes == null -> context.getString(R.string.widget_unconfigured)
             focusing -> context.getString(R.string.widget_focusing_description)
             else -> context.getString(R.string.widget_start_description, formatDuration(minutes))
         }
-        Column(
-            modifier = GlanceModifier
-                .fillMaxSize()
-                .background(ImageProvider(background))
-                .padding(4.dp)
-                .clickable(actionStartActivity(launchIntent(context, minutes, token)))
-                .semantics { contentDescription = description },
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                text = value,
-                maxLines = 1,
-                style = TextStyle(
-                    color = ColorProvider(if (focusing) Color(0xFFE8F5EE) else EMERALD),
-                    fontSize = if (value.length > 3) 18.sp else 24.sp,
-                    fontWeight = FontWeight.Normal,
-                ),
-            )
-            Text(
-                text = unit,
-                maxLines = 1,
-                style = TextStyle(color = ColorProvider(if (focusing) EMERALD else MUTED), fontSize = 11.sp),
-            )
+        val tap = PendingIntent.getActivity(
+            context, id, launchIntent(context, minutes, token),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        return RemoteViews(context.packageName, R.layout.widget_view).apply {
+            setInt(R.id.widget_root, "setBackgroundResource", if (focusing) R.drawable.widget_background_active else R.drawable.widget_background)
+            setTextViewText(R.id.widget_value, value)
+            setTextViewTextSize(R.id.widget_value, TypedValue.COMPLEX_UNIT_SP, if (value.length > 3) 18f else 24f)
+            setTextColor(R.id.widget_value, if (focusing) FOCUSING_TEXT else EMERALD)
+            setTextViewText(R.id.widget_unit, unit)
+            setTextColor(R.id.widget_unit, if (focusing) EMERALD else MUTED)
+            setContentDescription(R.id.widget_root, description)
+            setOnClickPendingIntent(R.id.widget_root, tap)
         }
     }
 
-    companion object {
-        val MINUTES_KEY = intPreferencesKey("minutes")
-        private val EMERALD = Color(0xFF34C48B)
-        private val MUTED = Color(0xFF8A8F8C)
-
-        fun launchIntent(context: Context, minutes: Int?, token: String): Intent =
-            Intent(context, MainActivity::class.java).apply {
-                if (minutes != null) {
-                    action = MainActivity.ACTION_START_FOCUS
-                    putExtra(MainActivity.EXTRA_MINUTES, minutes)
-                    putExtra(MainActivity.EXTRA_TOKEN, token)
-                    // Unique data keeps PendingIntents for different durations distinct.
-                    data = "manazone://focus/$minutes".toUri()
-                }
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-
-        suspend fun refreshAll(context: Context) = FocusWidget().updateAll(context)
-
-        suspend fun setMinutes(context: Context, appWidgetId: Int, minutes: Int) {
-            val glanceId = GlanceAppWidgetManager(context).getGlanceIdBy(appWidgetId)
-            updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
-                prefs.toMutablePreferences().apply { this[MINUTES_KEY] = minutes }
-            }
-            FocusWidget().update(context, glanceId)
-        }
-
-        suspend fun getMinutes(context: Context, appWidgetId: Int): Int? = runCatching {
-            val glanceId = GlanceAppWidgetManager(context).getGlanceIdBy(appWidgetId)
-            androidx.glance.appwidget.state.getAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId)[MINUTES_KEY]
-        }.getOrNull()
-    }
+    private fun prefs(context: Context) = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private fun key(appWidgetId: Int) = "minutes_$appWidgetId"
 }
 
-class FocusWidgetReceiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = FocusWidget()
+class FocusWidgetReceiver : AppWidgetProvider() {
+    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+        val pending = goAsync()
+        (context.applicationContext as ManazoneApp).container.appScope.launch {
+            try {
+                FocusWidget.update(context, appWidgetIds)
+            } finally {
+                pending.finish()
+            }
+        }
+    }
+
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) = FocusWidget.forget(context, appWidgetIds)
 }

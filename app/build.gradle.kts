@@ -64,6 +64,17 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+    // Library translations (Material, etc.) are dead weight for an English-only app.
+    androidResources {
+        localeFilters += "en"
+    }
+    packaging {
+        resources.excludes += setOf("/META-INF/*.version", "/META-INF/androidx/**", "/kotlin/**", "/DebugProbesKt.bin", "/META-INF/com/android/build/gradle/app-metadata.properties")
+    }
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
     buildFeatures {
         compose = true
     }
@@ -87,7 +98,6 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.datastore.preferences)
-    implementation(libs.androidx.glance.appwidget)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 

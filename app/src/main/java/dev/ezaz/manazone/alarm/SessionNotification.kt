@@ -48,7 +48,6 @@ class SessionNotification(private val context: Context) {
         )
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle(context.getString(R.string.widget_name))
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
@@ -56,6 +55,9 @@ class SessionNotification(private val context: Context) {
             .setWhen(endWall)
             .setShowWhen(true)
             .setUsesChronometer(true)
+            // Safety net: if finalization is delayed (alarm deferred, process killed), the system removes the
+            // notification at zero instead of letting the chronometer run into negative time.
+            .setTimeoutAfter(remaining.coerceAtLeast(1))
             .setChronometerCountDown(true)
             .setContentIntent(open)
             .addAction(0, context.getString(R.string.action_stop), stop)

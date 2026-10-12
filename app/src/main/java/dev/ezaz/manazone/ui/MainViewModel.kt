@@ -17,9 +17,15 @@ import dev.ezaz.manazone.feedback.ImportResult
 import dev.ezaz.manazone.presets.PresetEdit
 import dev.ezaz.manazone.presets.UserSettings
 import dev.ezaz.manazone.session.DailyStats
+import dev.ezaz.manazone.session.History
+import dev.ezaz.manazone.session.RangeStats
+import dev.ezaz.manazone.session.StatsRange
 import dev.ezaz.manazone.session.FocusSession
 import dev.ezaz.manazone.session.SessionManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -34,7 +40,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.ZoneId
 
-enum class Route { Home, Focus, Settings }
+enum class Route { Home, Focus, Settings, Stats }
 
 class MainViewModel(
     private val container: AppContainer,
@@ -77,6 +83,18 @@ class MainViewModel(
     }.distinctUntilChanged().flatMapLatest { (start, end) ->
         container.sessionStore.observeFinishedEndingAfter(start).map { DailyStats.compute(it, start, end) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DailyStats.EMPTY)
+
+    private val _statsRange = MutableStateFlow(StatsRange.WEEK)
+    val statsRange: StateFlow<StatsRange> = _statsRange.asStateFlow()
+    fun selectStatsRange(range: StatsRange) { _statsRange.value = range }
+
+    /** History and analytics for the chosen range, computed off the main thread. */
+    val stats: StateFlow<RangeStats> =
+        combine(container.sessionStore.observeFinishedEndingAfter(0), _statsRange) { sessions, range ->
+            val zone = ZoneId.systemDefault()
+            val today = java.time.Instant.ofEpochMilli(manager.now().wallMillis).atZone(zone).toLocalDate()
+            History.compute(sessions, range, today, zone)
+        }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), RangeStats.EMPTY)
 
     fun timeNow() = manager.now()
 
@@ -152,6 +170,7 @@ class MainViewModel(
 
     fun setClockColor(argb: Int) = viewModelScope.launch { safely { container.preferences.setClockColor(argb) } }
     fun setClockWeight(weight: Int) = viewModelScope.launch { safely { container.preferences.setClockWeight(weight) } }
+    fun setOledProtection(enabled: Boolean) = viewModelScope.launch { safely { container.preferences.setOledProtection(enabled) } }
 
     fun setClockStyle(style: String) = viewModelScope.launch { safely { container.preferences.setClockStyle(style) } }
     fun setSoundId(id: String) = viewModelScope.launch { safely { container.preferences.setSoundId(id) } }

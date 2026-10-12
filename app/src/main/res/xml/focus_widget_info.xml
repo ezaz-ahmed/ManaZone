@@ -6,7 +6,7 @@
     tools:ignore="UnusedAttribute"
     android:configure="dev.ezaz.manazone.widget.WidgetConfigActivity"
     android:description="@string/widget_description"
-    android:initialLayout="@layout/glance_default_loading_layout"
+    android:initialLayout="@layout/widget_view"
     android:minWidth="40dp"
     android:minHeight="40dp"
     android:previewLayout="@layout/widget_preview"

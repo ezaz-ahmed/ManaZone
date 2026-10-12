@@ -16,4 +16,6 @@
     <string name="focus_complete">COMPLETE</string>
     <string name="focus_focused">focused</string>
     <string name="widget_preview_unit">min</string>
+    <string name="widget_unset_value" translatable="false">–</string>
+    <string name="widget_unset_unit">set</string>
 </resources>

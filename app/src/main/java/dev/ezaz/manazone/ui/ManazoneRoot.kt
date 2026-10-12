@@ -24,6 +24,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ezaz.manazone.ui.focus.FocusScreen
 import dev.ezaz.manazone.ui.home.HomeScreen
 import dev.ezaz.manazone.ui.settings.SettingsScreen
+import dev.ezaz.manazone.ui.stats.StatsScreen
 import dev.ezaz.manazone.ui.theme.Mz
 
 @Composable
@@ -54,6 +55,7 @@ fun ManazoneRoot(vm: MainViewModel) {
                     Route.Home -> HomeScreen(vm)
                     Route.Focus -> FocusScreen(vm)
                     Route.Settings -> SettingsScreen(vm)
+                    Route.Stats -> StatsScreen(vm)
                 }
             }
         }

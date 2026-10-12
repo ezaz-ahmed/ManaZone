@@ -38,6 +38,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import androidx.core.view.WindowCompat
@@ -137,13 +138,15 @@ private fun Countdown(session: FocusSession, vm: MainViewModel) {
         val landscape = maxWidth > maxHeight
         val text = formatCountdown(remaining)
 
-        // Drift the static digits to a new spot every 30s (slowly, so it isn't distracting) to spread
-        // OLED wear. Horizontal range stays inside the margin left by the 88% width cap.
-        val step = (SessionTiming.rawElapsedMillis(session, now) / 30_000).toInt()
-        val maxX = ((maxWidth * 0.06f) - 2.dp).coerceAtLeast(0.dp)
-        val maxY = if (landscape) 24.dp else 56.dp
-        val shiftX by animateDpAsState(maxX * ((((step * 37) % 21) - 10) / 10f), tween(3000), label = "shiftX")
-        val shiftY by animateDpAsState(maxY * ((((step * 23) % 21) - 10) / 10f), tween(3000), label = "shiftY")
+        // On OLED screens, drift the static digits to a new spot once a minute (slowly, so it isn't
+        // distracting) to spread pixel wear; on other screens the clock stays centered. Horizontal range
+        // stays inside the margin left by the 88% width cap. The offset is read at layout time, so the
+        // glide re-lays-out the clock without recomposing it every frame.
+        val step = if (settings.oledProtection) (SessionTiming.rawElapsedMillis(session, now) / 60_000).toInt() else 0
+        val maxX = if (settings.oledProtection) ((maxWidth * 0.06f) - 2.dp).coerceAtLeast(0.dp) else 0.dp
+        val maxY = if (!settings.oledProtection) 0.dp else if (landscape) 24.dp else 56.dp
+        val shiftX = animateDpAsState(maxX * ((((step * 37) % 21) - 10) / 10f), tween(3000), label = "shiftX")
+        val shiftY = animateDpAsState(maxY * ((((step * 23) % 21) - 10) / 10f), tween(3000), label = "shiftY")
 
         // Digits are sized from the space available: wide enough for the text, and never taller than
         // about 28% (portrait) or 55% (landscape) of the screen.
@@ -154,7 +157,7 @@ private fun Countdown(session: FocusSession, vm: MainViewModel) {
             weight = settings.clockWeight,
             heightFraction = if (landscape) 0.55f else 0.28f,
             contentModifier = Modifier
-                .offset(shiftX, shiftY)
+                .offset { IntOffset(shiftX.value.roundToPx(), shiftY.value.roundToPx()) }
                 .testTag("countdown")
                 .semantics { contentDescription = "${formatCountdown(remaining)} remaining" },
         )
