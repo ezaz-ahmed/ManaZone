@@ -1,5 +1,6 @@
 package dev.ezaz.manazone.ui.focus
 
+import android.content.pm.ActivityInfo
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedContent
@@ -125,6 +126,7 @@ private sealed interface FocusContent {
 private fun Countdown(session: FocusSession, vm: MainViewModel) {
     KeepScreenOn()
     ImmersiveSystemBars()
+    RotateWithDevice()
 
     val settings by vm.settings.collectAsStateWithLifecycle()
     val now = rememberTicker(vm::timeNow)
@@ -191,6 +193,16 @@ private fun KeepScreenOn() {
     DisposableEffect(view) {
         view.keepScreenOn = true
         onDispose { view.keepScreenOn = false }
+    }
+}
+
+/** The app is portrait-locked (manifest); only the running clock follows the device's rotation. */
+@Composable
+private fun RotateWithDevice() {
+    val activity = LocalActivity.current ?: return
+    DisposableEffect(activity) {
+        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+        onDispose { activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT }
     }
 }
 
