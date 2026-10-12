@@ -3,6 +3,8 @@
 
     <!-- Completion cue. -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Ongoing countdown notification with a Stop action. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Optional, user-controlled Do Not Disturb integration (granted in system settings). -->
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
     <!-- On-time completion alarm. Pre-granted on API 31-32; on 33+ Manazone falls back to an
@@ -55,6 +57,10 @@
 
         <receiver
             android:name=".alarm.CompletionReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".alarm.StopReceiver"
             android:exported="false" />
 
     </application>

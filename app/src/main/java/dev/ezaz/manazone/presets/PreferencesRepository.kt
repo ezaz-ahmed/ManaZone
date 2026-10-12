@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -18,7 +19,14 @@ data class UserSettings(
     val vibrationEnabled: Boolean = true,
     val soundEnabled: Boolean = false,
     val dndEnabled: Boolean = false,
+    /** ARGB of the countdown digits. */
+    val clockColor: Int = DEFAULT_CLOCK_COLOR,
+    /** Font weight (100..900) of the countdown digits. */
+    val clockWeight: Int = DEFAULT_CLOCK_WEIGHT,
 )
+
+const val DEFAULT_CLOCK_COLOR = 0xFF34C48B.toInt()
+const val DEFAULT_CLOCK_WEIGHT = 300
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "manazone_prefs")
 
@@ -40,6 +48,8 @@ class PreferencesRepository(context: Context) {
             vibrationEnabled = prefs[VIBRATION] ?: true,
             soundEnabled = prefs[SOUND] ?: false,
             dndEnabled = prefs[DND] ?: false,
+            clockColor = prefs[CLOCK_COLOR] ?: DEFAULT_CLOCK_COLOR,
+            clockWeight = (prefs[CLOCK_WEIGHT] ?: DEFAULT_CLOCK_WEIGHT).coerceIn(100, 900),
         )
     }
 
@@ -53,6 +63,9 @@ class PreferencesRepository(context: Context) {
     suspend fun setSound(enabled: Boolean) = store.edit { it[SOUND] = enabled }
     suspend fun setDnd(enabled: Boolean) = store.edit { it[DND] = enabled }
 
+    suspend fun setClockColor(argb: Int) = store.edit { it[CLOCK_COLOR] = argb }
+    suspend fun setClockWeight(weight: Int) = store.edit { it[CLOCK_WEIGHT] = weight.coerceIn(100, 900) }
+
     suspend fun clear() = store.edit { it.clear() }
 
     private companion object {
@@ -60,5 +73,7 @@ class PreferencesRepository(context: Context) {
         val VIBRATION = booleanPreferencesKey("completion_vibration")
         val SOUND = booleanPreferencesKey("completion_sound")
         val DND = booleanPreferencesKey("dnd_enabled")
+        val CLOCK_COLOR = intPreferencesKey("clock_color")
+        val CLOCK_WEIGHT = intPreferencesKey("clock_weight")
     }
 }

@@ -4,7 +4,11 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,6 +30,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -38,12 +44,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ezaz.manazone.R
 import dev.ezaz.manazone.presets.DurationInput
@@ -53,10 +64,16 @@ import dev.ezaz.manazone.presets.PresetRules
 import dev.ezaz.manazone.presets.formatDuration
 import dev.ezaz.manazone.ui.MainViewModel
 import dev.ezaz.manazone.ui.Route
+import dev.ezaz.manazone.ui.theme.DigitStyle
 import dev.ezaz.manazone.ui.theme.Mz
+import kotlin.math.roundToInt
 
 /** Editor state: null = closed, -1 = adding, otherwise the index being edited. */
 private const val ADDING = -1
+
+private val CLOCK_COLORS = listOf(
+    0xFF34C48B, 0xFFE6E9E7, 0xFF4FC3F7, 0xFFFFB74D, 0xFFE57373, 0xFFBA68C8, 0xFFFFF176,
+).map { it.toInt() }
 
 @Composable
 fun SettingsScreen(vm: MainViewModel) {
@@ -114,6 +131,42 @@ fun SettingsScreen(vm: MainViewModel) {
             }
         }
 
+        Section("Clock")
+        Text(
+            "12:34",
+            style = DigitStyle.copy(
+                fontSize = 56.sp,
+                color = Color(settings.clockColor),
+                fontWeight = FontWeight(settings.clockWeight),
+            ),
+            modifier = Modifier.padding(horizontal = 8.dp).testTag("clockPreview"),
+        )
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            CLOCK_COLORS.forEach { argb ->
+                val selected = argb == settings.clockColor
+                Box(
+                    Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color(argb))
+                        .border(if (selected) 3.dp else 1.dp, if (selected) Mz.TextPrimary else Mz.Hairline, CircleShape)
+                        .clickable(role = Role.RadioButton, onClickLabel = "Use this color") { vm.setClockColor(argb) },
+                )
+            }
+        }
+        Text("Thickness", style = MaterialTheme.typography.bodyLarge, color = Mz.TextPrimary, modifier = Modifier.padding(horizontal = 8.dp))
+        Slider(
+            value = settings.clockWeight / 100f,
+            onValueChange = { vm.setClockWeight(it.roundToInt() * 100) },
+            valueRange = 1f..9f,
+            steps = 7,
+            colors = SliderDefaults.colors(thumbColor = Mz.Emerald, activeTrackColor = Mz.Emerald, inactiveTrackColor = Mz.Hairline),
+            modifier = Modifier.padding(horizontal = 8.dp),
+        )
+
         Section("Completion")
         ToggleRow("Vibration", "A short double pulse when a session completes", settings.vibrationEnabled, vm::setVibration)
         ToggleRow("Sound", "A quiet ding-dong. Follows your ringer and Do Not Disturb settings.", settings.soundEnabled, vm::setSound)
@@ -136,9 +189,9 @@ fun SettingsScreen(vm: MainViewModel) {
             """
             Tap a duration to start. The countdown is calculated from the start time, so it stays accurate while you take a call, switch apps, lock the phone or rotate the screen. None of these pause or cancel the session.
 
-            Stop ends the session right away and records only the time you actually focused.
+            The focus screen shows only the countdown. To end a session early, use the Stop button on the notification; only the time you actually focused is recorded.
 
-            The screen stays awake while the countdown is visible. If you leave Manazone, the session keeps running; return any time from the app or a widget.
+            The screen stays awake while the countdown is visible. If you leave Manazone, the session keeps running and the countdown stays in your notifications; return any time from there, the app or a widget.
 
             If the phone restarts, an unfinished session continues from the time on the clock, and a session that ran out is recorded as completed.
             """.trimIndent(),

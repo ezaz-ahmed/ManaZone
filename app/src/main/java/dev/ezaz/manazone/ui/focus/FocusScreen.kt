@@ -13,14 +13,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,11 +27,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -44,7 +43,6 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ezaz.manazone.core.TimeSnapshot
-import dev.ezaz.manazone.presets.formatDuration
 import dev.ezaz.manazone.session.FocusSession
 import dev.ezaz.manazone.session.SessionTiming
 import dev.ezaz.manazone.ui.MainViewModel
@@ -115,9 +113,9 @@ private fun Countdown(session: FocusSession, vm: MainViewModel) {
     KeepScreenOn()
     ImmersiveSystemBars()
 
+    val settings by vm.settings.collectAsStateWithLifecycle()
     val now = rememberTicker(vm::timeNow)
     val remaining = SessionTiming.remainingMillis(session, now)
-    val progress = SessionTiming.progress(session, now)
     val elapsed = remaining == 0L
     LaunchedEffect(session.id, elapsed) {
         if (elapsed) vm.onCountdownElapsed()
@@ -139,47 +137,23 @@ private fun Countdown(session: FocusSession, vm: MainViewModel) {
         val shiftX = (((minute * 7) % 9) - 4).dp
         val shiftY = (((minute * 5) % 9) - 4).dp
 
-        Column(
-            Modifier.fillMaxSize().padding(vertical = if (landscape) 12.dp else 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
-                "${formatDuration(session.plannedMinutes)} focus".uppercase(),
-                style = MaterialTheme.typography.labelMedium,
-                color = Mz.TextTertiary,
+                text,
+                style = DigitStyle.copy(
+                    fontSize = fontSize,
+                    lineHeight = fontSize,
+                    color = Color(settings.clockColor),
+                    fontWeight = FontWeight(settings.clockWeight),
+                ),
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                modifier = Modifier
+                    .offset(shiftX, shiftY)
+                    .testTag("countdown")
+                    .semantics { contentDescription = "${formatCountdown(remaining)} remaining" },
             )
-            Spacer(Modifier.weight(1f))
-            Column(
-                Modifier.offset(shiftX, shiftY),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    text,
-                    style = DigitStyle.copy(fontSize = fontSize, lineHeight = fontSize),
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    modifier = Modifier
-                        .testTag("countdown")
-                        .semantics { contentDescription = "${formatCountdown(remaining)} remaining" },
-                )
-                Spacer(Modifier.height(if (landscape) 12.dp else 20.dp))
-                ProgressHairline(progress, Modifier.width(digitSize * text.length * charWidthEm * 0.8f))
-            }
-            Spacer(Modifier.weight(1f))
-            QuietButton("Stop", onClick = vm::stop)
         }
-    }
-}
-
-@Composable
-private fun ProgressHairline(progress: Float, modifier: Modifier) {
-    Box(modifier.height(2.dp).background(Mz.Hairline)) {
-        Box(
-            Modifier
-                .fillMaxHeight()
-                .fillMaxWidth(progress.coerceIn(0f, 1f))
-                .background(Mz.EmeraldDim)
-        )
     }
 }
 

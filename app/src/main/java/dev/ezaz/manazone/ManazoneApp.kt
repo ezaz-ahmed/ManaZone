@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.util.Log
 import dev.ezaz.manazone.alarm.CompletionAlarmScheduler
+import dev.ezaz.manazone.alarm.SessionNotification
 import dev.ezaz.manazone.core.SystemTimeSource
 import dev.ezaz.manazone.core.TimeSource
 import dev.ezaz.manazone.data.ManazoneDatabase
@@ -53,15 +54,18 @@ class AppContainer(context: Context) {
     val dndController: DndController = AndroidDndController(appContext)
     private val alarms = CompletionAlarmScheduler(appContext)
     private val feedback = CompletionFeedback(appContext)
+    private val notification = SessionNotification(appContext)
 
     private val effects = object : SessionEffects {
         override suspend fun onActive(session: FocusSession) {
             runCatching { alarms.schedule(session) }.onFailure { Log.w(TAG, "Alarm scheduling failed", it) }
+            runCatching { notification.show(session) }.onFailure { Log.w(TAG, "Notification failed", it) }
             refreshWidgets()
         }
 
         override suspend fun onFinished(session: FocusSession, playCompletionFeedback: Boolean) {
             alarms.cancel()
+            runCatching { notification.cancel() }
             refreshWidgets()
             if (playCompletionFeedback && session.status == SessionStatus.COMPLETED) {
                 val settings = preferences.currentSettings()

@@ -146,6 +146,9 @@ class MainViewModel(
     fun setVibration(enabled: Boolean) = viewModelScope.launch { safely { container.preferences.setVibration(enabled) } }
     fun setSound(enabled: Boolean) = viewModelScope.launch { safely { container.preferences.setSound(enabled) } }
 
+    fun setClockColor(argb: Int) = viewModelScope.launch { safely { container.preferences.setClockColor(argb) } }
+    fun setClockWeight(weight: Int) = viewModelScope.launch { safely { container.preferences.setClockWeight(weight) } }
+
     /** Returns true if the caller must first explain and open the system access screen. */
     fun requestDnd(enabled: Boolean): Boolean {
         if (enabled && !container.dndController.hasAccess()) {
