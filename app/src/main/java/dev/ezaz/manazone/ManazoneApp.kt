@@ -24,6 +24,7 @@ import dev.ezaz.manazone.widget.FocusWidget
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -69,8 +70,26 @@ class AppContainer(context: Context) {
             refreshWidgets()
             if (playCompletionFeedback && session.status == SessionStatus.COMPLETED) {
                 val settings = preferences.currentSettings()
-                appScope.launch { feedback.play(settings.vibrationEnabled, settings.soundEnabled, settings.soundId, settings.soundVolume / 100f) }
+                feedbackJob = appScope.launch {
+                    feedback.play(settings.vibrationEnabled, settings.soundEnabled, settings.soundId, settings.soundVolume / 100f)
+                }
             }
+        }
+    }
+
+    @Volatile
+    private var feedbackJob: Job? = null
+
+    /** Suspends until any completion cue in progress has finished, so callers can keep the process alive. */
+    suspend fun awaitFeedback() {
+        feedbackJob?.join()
+    }
+
+    /** Posts the countdown notification for the running session, e.g. after the permission is granted. */
+    fun showNotificationForActive() {
+        appScope.launch {
+            val session = sessionStore.active() ?: return@launch
+            runCatching { notification.show(session) }.onFailure { Log.w(TAG, "Notification failed", it) }
         }
     }
 

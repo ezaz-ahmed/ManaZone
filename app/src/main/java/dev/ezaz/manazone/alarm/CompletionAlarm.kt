@@ -8,8 +8,8 @@ import android.content.Intent
 import android.os.Build
 import dev.ezaz.manazone.ManazoneApp
 import dev.ezaz.manazone.session.FocusSession
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Wakes the app at the planned end so a session that finishes in the background is finalized and
@@ -50,8 +50,8 @@ class CompletionReceiver : BroadcastReceiver() {
         container.appScope.launch {
             try {
                 container.sessionManager.reconcile()
-                // Give the completion sound time to play before the process may be reclaimed.
-                delay(2_500)
+                // Keep the process alive until the completion cue ends (bounded by goAsync's ~10s limit).
+                withTimeoutOrNull(8_000) { container.awaitFeedback() }
             } finally {
                 pending.finish()
             }

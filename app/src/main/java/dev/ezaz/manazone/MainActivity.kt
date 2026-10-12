@@ -2,6 +2,7 @@ package dev.ezaz.manazone
 
 import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -11,6 +12,8 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import dev.ezaz.manazone.session.SessionManager
 import dev.ezaz.manazone.ui.MainViewModel
 import dev.ezaz.manazone.ui.ManazoneRoot
@@ -20,6 +23,12 @@ class MainActivity : ComponentActivity() {
 
     private val vm: MainViewModel by viewModels { MainViewModel.Factory }
 
+    private val notificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            // A session started before the answer has no countdown notification yet.
+            if (granted) (application as ManazoneApp).container.showNotificationForActive()
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
@@ -28,13 +37,21 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // A restored activity (rotation, process death) must not replay the launch intent.
         if (savedInstanceState == null) handleIntent(intent)
-        // The countdown notification (with Stop) needs this on Android 13+.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && savedInstanceState == null) {
-            registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
-                .launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
+        if (savedInstanceState == null) askForNotificationsOnce()
         setContent {
             ManazoneTheme { ManazoneRoot(vm) }
+        }
+    }
+
+    /** The countdown notification (with Stop) needs this on Android 13+. Asked once, not on every launch. */
+    private fun askForNotificationsOnce() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return
+        val preferences = (application as ManazoneApp).container.preferences
+        lifecycleScope.launch {
+            if (preferences.notificationPermissionAsked()) return@launch
+            preferences.setNotificationPermissionAsked()
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 
