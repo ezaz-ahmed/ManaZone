@@ -4,6 +4,8 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -56,7 +58,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ezaz.manazone.R
 import dev.ezaz.manazone.presets.DurationInput
@@ -67,6 +71,7 @@ import dev.ezaz.manazone.presets.formatDuration
 import dev.ezaz.manazone.ui.MainViewModel
 import dev.ezaz.manazone.ui.Route
 import dev.ezaz.manazone.feedback.CompletionSound
+import dev.ezaz.manazone.feedback.CustomSoundStore
 import dev.ezaz.manazone.ui.focus.ClockDisplay
 import dev.ezaz.manazone.ui.focus.ClockStyle
 import dev.ezaz.manazone.ui.theme.Mz
@@ -88,6 +93,10 @@ fun SettingsScreen(vm: MainViewModel) {
     var rowMessage by remember { mutableStateOf<String?>(null) }
     var explainDnd by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
+    val customSounds by vm.customSounds.collectAsStateWithLifecycle()
+    val pickSound = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) vm.addCustomSound(uri)
+    }
 
     BackHandler { vm.navigate(Route.Home) }
 
@@ -162,7 +171,7 @@ fun SettingsScreen(vm: MainViewModel) {
                         .clickable(role = Role.RadioButton, onClickLabel = "Use ${option.label} style") { vm.setClockStyle(option.name) },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(option.label, style = MaterialTheme.typography.bodyMedium, color = if (selected) Mz.Emerald else Mz.TextSecondary)
+                    Text(option.label, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp), maxLines = 1, color = if (selected) Mz.Emerald else Mz.TextSecondary)
                 }
             }
         }
@@ -232,6 +241,58 @@ fun SettingsScreen(vm: MainViewModel) {
                     Text(sound.name, style = MaterialTheme.typography.bodyLarge, color = if (selected) Mz.TextPrimary else Mz.TextSecondary)
                 }
             }
+            customSounds.forEach { sound ->
+                val selected = sound.id == settings.soundId
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 52.dp)
+                        .clickable(role = Role.RadioButton) {
+                            vm.setSoundId(sound.id)
+                            vm.previewSound(sound.id, settings.soundVolume)
+                        }
+                        .padding(start = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(
+                        selected = selected,
+                        onClick = null,
+                        colors = RadioButtonDefaults.colors(selectedColor = Mz.Emerald, unselectedColor = Mz.TextTertiary),
+                    )
+                    Spacer(Modifier.size(16.dp))
+                    Text(
+                        sound.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (selected) Mz.TextPrimary else Mz.TextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(onClick = { vm.removeCustomSound(sound.id) }) {
+                        Icon(painterResource(R.drawable.ic_close), "Remove ${sound.name}", tint = Mz.TextSecondary)
+                    }
+                }
+            }
+            if (customSounds.size < CustomSoundStore.MAX_SOUNDS) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 56.dp)
+                        .clickable(role = Role.Button) { pickSound.launch(arrayOf("audio/*")) }
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(painterResource(R.drawable.ic_add), contentDescription = null, tint = Mz.Emerald)
+                    Spacer(Modifier.size(16.dp))
+                    Text("Add your own sound", color = Mz.Emerald, style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+            Text(
+                "Pick any audio file up to ${CustomSoundStore.MAX_SECONDS} seconds. It is copied into Manazone, so it keeps working if the original moves.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Mz.TextTertiary,
+                modifier = Modifier.padding(horizontal = 8.dp),
+            )
         }
 
         Section("Do Not Disturb")

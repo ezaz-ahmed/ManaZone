@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -36,12 +37,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -111,17 +122,44 @@ fun HomeScreen(vm: MainViewModel) {
 @Composable
 private fun Header(onSettings: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(6.dp).clip(CircleShape).background(Mz.Emerald))
-        Spacer(Modifier.width(10.dp))
-        Text(
-            "manazone",
-            style = MaterialTheme.typography.titleMedium.copy(letterSpacing = 3.sp, fontWeight = FontWeight.Light),
-            color = Mz.TextPrimary,
-            modifier = Modifier.weight(1f),
-        )
+        Wordmark(Modifier.weight(1f))
         IconButton(onClick = onSettings, modifier = Modifier.size(48.dp)) {
             Icon(painterResource(R.drawable.ic_tune), contentDescription = "Settings", tint = Mz.TextSecondary)
         }
+    }
+}
+
+/** App title: a focus-ring mark (a timer ring with its last quarter still to run) and a two-weight name. */
+@Composable
+private fun Wordmark(modifier: Modifier = Modifier) {
+    Row(
+        modifier.semantics(mergeDescendants = true) { heading(); contentDescription = "Manazone" },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Canvas(Modifier.size(26.dp)) {
+            val stroke = 3.dp.toPx()
+            val inset = stroke / 2
+            val arcSize = Size(size.width - stroke, size.height - stroke)
+            drawCircle(Mz.Hairline, radius = arcSize.width / 2, style = Stroke(stroke))
+            drawArc(
+                color = Mz.Emerald,
+                startAngle = -90f,
+                sweepAngle = 270f,
+                useCenter = false,
+                topLeft = Offset(inset, inset),
+                size = arcSize,
+                style = Stroke(stroke, cap = StrokeCap.Round),
+            )
+            drawCircle(Mz.Emerald, radius = 2.5.dp.toPx())
+        }
+        Spacer(Modifier.width(12.dp))
+        Text(
+            buildAnnotatedString {
+                withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, color = Mz.TextPrimary)) { append("mana") }
+                withStyle(SpanStyle(fontWeight = FontWeight.ExtraLight, color = Mz.Emerald)) { append("zone") }
+            },
+            style = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 27.sp, letterSpacing = (-0.8).sp),
+        )
     }
 }
 

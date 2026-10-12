@@ -25,7 +25,7 @@ data class UserSettings(
     /** Font weight (100..900) of the countdown digits. */
     val clockWeight: Int = DEFAULT_CLOCK_WEIGHT,
     /** Name of a [dev.ezaz.manazone.ui.focus.ClockStyle]. */
-    val clockStyle: String = "CLASSIC",
+    val clockStyle: String = "CLAY",
     val soundId: String = "ding_dong",
     /** Completion sound loudness, 10..100 percent. */
     val soundVolume: Int = 80,
@@ -56,7 +56,7 @@ class PreferencesRepository(context: Context) {
             dndEnabled = prefs[DND] ?: false,
             clockColor = prefs[CLOCK_COLOR] ?: DEFAULT_CLOCK_COLOR,
             clockWeight = (prefs[CLOCK_WEIGHT] ?: DEFAULT_CLOCK_WEIGHT).coerceIn(100, 900),
-            clockStyle = prefs[CLOCK_STYLE] ?: "CLASSIC",
+            clockStyle = prefs[CLOCK_STYLE] ?: "CLAY",
             soundId = prefs[SOUND_ID] ?: "ding_dong",
             soundVolume = (prefs[SOUND_VOLUME] ?: 80).coerceIn(10, 100),
         )

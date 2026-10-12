@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
+import android.media.MediaPlayer
 import android.os.Build
 import android.os.VibrationAttributes
 import android.os.VibrationEffect
@@ -11,12 +12,17 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.util.Log
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
+import java.io.File
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 /**
  * The one-shot completion cue: a short double vibration and/or a soft synthesized "ding-dong".
  * Callers are responsible for invoking it once per session (see SessionManager).
  */
-class CompletionFeedback(private val context: Context) {
+class CompletionFeedback(private val context: Context, private val customSounds: CustomSoundStore) {
 
     /** Plays the enabled cues and suspends until the sound (if any) has finished. */
     suspend fun play(vibrate: Boolean, sound: Boolean, soundId: String, volume: Float) {
@@ -26,8 +32,39 @@ class CompletionFeedback(private val context: Context) {
 
     /** Plays one sound at the given volume (0..1); used for completion and for previews in Settings. */
     suspend fun preview(soundId: String, volume: Float) {
-        runCatching { playPcm(CompletionSound.byId(soundId).render(volume)) }
-            .onFailure { if (it is kotlinx.coroutines.CancellationException) throw it else Log.w(TAG, "Sound failed", it) }
+        runCatching {
+            val custom = customSounds.fileFor(soundId)
+            // A custom sound whose file is gone falls back to the default rather than staying silent.
+            if (custom != null) playFile(custom, volume) else playPcm(CompletionSound.byId(soundId).render(volume))
+        }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it else Log.w(TAG, "Sound failed", it) }
+    }
+
+    private suspend fun playFile(file: File, volume: Float) {
+        val player = MediaPlayer()
+        try {
+            withTimeoutOrNull((CustomSoundStore.MAX_SECONDS + 5) * 1000L) {
+                suspendCancellableCoroutine<Unit> { cont ->
+                    player.setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build()
+                    )
+                    player.setDataSource(file.absolutePath)
+                    val v = volume.coerceIn(0f, 1f)
+                    player.setVolume(v, v)
+                    player.setOnCompletionListener { if (cont.isActive) cont.resume(Unit) }
+                    player.setOnErrorListener { _, _, _ ->
+                        if (cont.isActive) cont.resumeWithException(IllegalStateException("MediaPlayer error"))
+                        true
+                    }
+                    player.setOnPreparedListener { it.start() }
+                    player.prepareAsync()
+                }
+            }
+        } finally {
+            player.release()
+        }
     }
 
     private fun vibrate() {

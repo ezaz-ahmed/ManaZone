@@ -14,6 +14,7 @@ import dev.ezaz.manazone.dnd.DndController
 import dev.ezaz.manazone.dnd.DndOwnership
 import dev.ezaz.manazone.dnd.DndPolicy
 import dev.ezaz.manazone.feedback.CompletionFeedback
+import dev.ezaz.manazone.feedback.CustomSoundStore
 import dev.ezaz.manazone.presets.PreferencesRepository
 import dev.ezaz.manazone.session.DistractionGuard
 import dev.ezaz.manazone.session.FocusSession
@@ -54,7 +55,8 @@ class AppContainer(context: Context) {
     val preferences = PreferencesRepository(appContext)
     val dndController: DndController = AndroidDndController(appContext)
     private val alarms = CompletionAlarmScheduler(appContext)
-    val feedback = CompletionFeedback(appContext)
+    val customSounds = CustomSoundStore(appContext)
+    val feedback = CompletionFeedback(appContext, customSounds)
     private val notification = SessionNotification(appContext)
 
     private val effects = object : SessionEffects {

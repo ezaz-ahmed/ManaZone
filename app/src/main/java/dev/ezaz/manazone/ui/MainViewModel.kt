@@ -1,5 +1,6 @@
 package dev.ezaz.manazone.ui
 
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -10,6 +11,9 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import dev.ezaz.manazone.AppContainer
 import dev.ezaz.manazone.ManazoneApp
+import dev.ezaz.manazone.feedback.CompletionSound
+import dev.ezaz.manazone.feedback.CustomSound
+import dev.ezaz.manazone.feedback.ImportResult
 import dev.ezaz.manazone.presets.PresetEdit
 import dev.ezaz.manazone.presets.UserSettings
 import dev.ezaz.manazone.session.DailyStats
@@ -152,6 +156,33 @@ class MainViewModel(
     fun setClockStyle(style: String) = viewModelScope.launch { safely { container.preferences.setClockStyle(style) } }
     fun setSoundId(id: String) = viewModelScope.launch { safely { container.preferences.setSoundId(id) } }
     fun setSoundVolume(percent: Int) = viewModelScope.launch { safely { container.preferences.setSoundVolume(percent) } }
+
+    val customSounds: StateFlow<List<CustomSound>> = container.customSounds.sounds
+
+    /** Adds a user-picked audio file, selects it and plays it; rejections are shown as a message. */
+    fun addCustomSound(uri: Uri) {
+        viewModelScope.launch {
+            safely {
+                when (val result = container.customSounds.import(uri)) {
+                    is ImportResult.Rejected -> _message.value = result.message
+                    is ImportResult.Added -> {
+                        container.preferences.setSoundId(result.sound.id)
+                        previewSound(result.sound.id, settings.value.soundVolume)
+                    }
+                }
+            }
+        }
+    }
+
+    /** Removes a custom sound; if it was the selected one, the default takes over. */
+    fun removeCustomSound(id: String) {
+        viewModelScope.launch {
+            safely {
+                container.customSounds.remove(id)
+                if (settings.value.soundId == id) container.preferences.setSoundId(CompletionSound.DEFAULT_ID)
+            }
+        }
+    }
 
     private var previewJob: kotlinx.coroutines.Job? = null
 
