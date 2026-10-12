@@ -81,6 +81,9 @@ class PreferencesRepository(context: Context) {
     suspend fun notificationPermissionAsked(): Boolean = data.first()[NOTIFICATION_ASKED] ?: false
     suspend fun setNotificationPermissionAsked() = store.edit { it[NOTIFICATION_ASKED] = true }
 
+    suspend fun dndOrphanScanReady(): Boolean = data.first()[DND_SCAN_READY] ?: false
+    suspend fun setDndOrphanScanReady() = store.edit { it[DND_SCAN_READY] = true }
+
     suspend fun clear() = store.edit { it.clear() }
 
     private companion object {
@@ -93,6 +96,7 @@ class PreferencesRepository(context: Context) {
         val CLOCK_STYLE = stringPreferencesKey("clock_style")
         val SOUND_ID = stringPreferencesKey("completion_sound_id")
         val SOUND_VOLUME = intPreferencesKey("completion_sound_volume")
+        val DND_SCAN_READY = booleanPreferencesKey("dnd_orphan_scan_ready")
         val NOTIFICATION_ASKED = booleanPreferencesKey("notification_permission_asked")
     }
 }

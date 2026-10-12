@@ -6,5 +6,14 @@
     <string name="widget_focusing_description">Focus session running. Tap to return.</string>
     <string name="widget_start_description">Start %1$s focus</string>
     <string name="widget_preview_value" translatable="false">25</string>
+    <string name="widget_config_title">Choose a duration</string>
+    <string name="widget_config_hint">Tapping this widget will start a focus session of this length.</string>
+    <string name="widget_config_footer">Add other durations in Manazone settings.</string>
+    <string name="widget_config_save_failed">Could not save widget</string>
+    <string name="notification_channel_name">Focus session</string>
+    <string name="action_stop">Stop</string>
+    <string name="action_done">Done</string>
+    <string name="focus_complete">COMPLETE</string>
+    <string name="focus_focused">focused</string>
     <string name="widget_preview_unit">min</string>
 </resources>

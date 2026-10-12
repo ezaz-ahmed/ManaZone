@@ -117,6 +117,16 @@ class AppContainer(context: Context) {
             val active = sessionManager.reconcile()
             if (active != null && active.status == SessionStatus.ACTIVE) {
                 runCatching { alarms.schedule(active) }
+            } else {
+                runCatching { notification.cancel() } // no session left to count down
+            }
+            // Rows finalized before DND ownership was cleared on release carry stale ownership; wipe
+            // them once so they are not mistaken for interrupted releases.
+            if (!preferences.dndOrphanScanReady()) {
+                sessionStore.clearFinishedDnd()
+                preferences.setDndOrphanScanReady()
+            } else {
+                sessionManager.releaseOrphanedDnd()
             }
         }
         appScope.launch {

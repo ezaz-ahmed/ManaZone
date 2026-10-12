@@ -298,6 +298,45 @@ class SessionManagerTest {
     }
 
     @Test
+    fun `dnd ownership is cleared after release so it is never released twice`() = runTest {
+        val ownership = DndOwnership(InterruptionFilter.ALL, InterruptionFilter.PRIORITY)
+        guard.ownership = ownership
+        val m = manager()
+        val id = m.start(25).session.id
+        m.cancel()
+        assertNull(store.byId(id).dnd)
+        m.releaseOrphanedDnd()
+        assertEquals(listOf(ownership), guard.released)
+    }
+
+    @Test
+    fun `a release interrupted by process death is completed at next start`() = runTest {
+        val ownership = DndOwnership(InterruptionFilter.ALL, InterruptionFilter.PRIORITY)
+        val id = store.insertIfNoActive(
+            FocusSession(0, 5 * min, time.wall, time.elapsed, time.boot, SessionStatus.ACTIVE, dnd = ownership)
+        )!!
+        store.finish(id, SessionStatus.COMPLETED, 5 * min, time.wall, completionSeen = true)
+
+        manager().releaseOrphanedDnd()
+
+        assertEquals(listOf(ownership), guard.released)
+        assertNull(store.byId(id).dnd)
+    }
+
+    @Test
+    fun `a failed release keeps ownership so it is retried`() = runTest {
+        val ownership = DndOwnership(InterruptionFilter.ALL, InterruptionFilter.PRIORITY)
+        val failing = object : DistractionGuard {
+            override suspend fun engage(): DndOwnership = ownership
+            override suspend fun release(ownership: DndOwnership) = error("revoked")
+        }
+        val m = SessionManager(store, time, effects, failing, log = { _, _ -> })
+        val id = m.start(25).session.id
+        m.cancel()
+        assertEquals(ownership, store.byId(id).dnd)
+    }
+
+    @Test
     fun `failing dnd does not block focusing`() = runTest {
         val failing = object : DistractionGuard {
             override suspend fun engage(): DndOwnership = error("revoked")

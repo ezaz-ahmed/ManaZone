@@ -33,9 +33,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ezaz.manazone.ManazoneApp
+import dev.ezaz.manazone.R
 import dev.ezaz.manazone.presets.formatDuration
 import dev.ezaz.manazone.ui.theme.ManazoneTheme
 import dev.ezaz.manazone.ui.theme.Mz
@@ -79,10 +81,10 @@ class WidgetConfigActivity : ComponentActivity() {
                         .verticalScroll(rememberScrollState())
                         .padding(24.dp),
                 ) {
-                    Text("Choose a duration", style = MaterialTheme.typography.headlineSmall, color = Mz.TextPrimary)
+                    Text(stringResource(R.string.widget_config_title), style = MaterialTheme.typography.headlineSmall, color = Mz.TextPrimary)
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Tapping this widget will start a focus session of this length.",
+                        stringResource(R.string.widget_config_hint),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Mz.TextSecondary,
                     )
@@ -99,7 +101,7 @@ class WidgetConfigActivity : ComponentActivity() {
                                             FocusWidget.setMinutes(this@WidgetConfigActivity, appWidgetId, minutes)
                                             setResult(RESULT_OK, resultData)
                                         } catch (e: Exception) {
-                                            Toast.makeText(this@WidgetConfigActivity, "Could not save widget", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(this@WidgetConfigActivity, getString(R.string.widget_config_save_failed), Toast.LENGTH_SHORT).show()
                                         }
                                         finish()
                                     }
@@ -119,7 +121,7 @@ class WidgetConfigActivity : ComponentActivity() {
                     }
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        "Add other durations in Manazone settings.",
+                        stringResource(R.string.widget_config_footer),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Mz.TextTertiary,
                     )

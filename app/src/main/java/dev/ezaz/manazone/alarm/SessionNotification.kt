@@ -29,7 +29,7 @@ class SessionNotification(private val context: Context) {
             PackageManager.PERMISSION_GRANTED
         ) return
         manager.createNotificationChannel(
-            NotificationChannel(CHANNEL_ID, "Focus session", NotificationManager.IMPORTANCE_LOW).apply {
+            NotificationChannel(CHANNEL_ID, context.getString(R.string.notification_channel_name), NotificationManager.IMPORTANCE_LOW).apply {
                 setShowBadge(false)
             }
         )
@@ -48,7 +48,7 @@ class SessionNotification(private val context: Context) {
         )
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle("Focus")
+            .setContentTitle(context.getString(R.string.widget_name))
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
@@ -58,7 +58,7 @@ class SessionNotification(private val context: Context) {
             .setUsesChronometer(true)
             .setChronometerCountDown(true)
             .setContentIntent(open)
-            .addAction(0, "Stop", stop)
+            .addAction(0, context.getString(R.string.action_stop), stop)
             .build()
         manager.notify(NOTIFICATION_ID, notification)
     }

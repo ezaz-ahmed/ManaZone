@@ -30,5 +30,11 @@ interface SessionStore {
 
     suspend fun rebase(id: Long, anchorElapsedMillis: Long, anchorBootCount: Int)
     suspend fun setDnd(id: Long, dnd: DndOwnership)
+    suspend fun clearDnd(id: Long)
+
+    /** Finished sessions whose DND ownership was never cleared, i.e. whose release may not have happened. */
+    suspend fun finishedWithDnd(): List<FocusSession>
+
+    suspend fun clearFinishedDnd()
     suspend fun markCompletionsSeen()
 }

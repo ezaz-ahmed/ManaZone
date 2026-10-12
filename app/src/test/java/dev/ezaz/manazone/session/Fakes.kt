@@ -71,6 +71,15 @@ class FakeSessionStore : SessionStore {
 
     override suspend fun setDnd(id: Long, dnd: DndOwnership) = update(id) { it.copy(dnd = dnd) }
 
+    override suspend fun clearDnd(id: Long) = update(id) { it.copy(dnd = null) }
+
+    override suspend fun finishedWithDnd() =
+        sessions.value.filter { it.status != SessionStatus.ACTIVE && it.dnd != null }
+
+    override suspend fun clearFinishedDnd() {
+        sessions.value = sessions.value.map { if (it.status != SessionStatus.ACTIVE) it.copy(dnd = null) else it }
+    }
+
     override suspend fun markCompletionsSeen() {
         sessions.value = sessions.value.map { it.copy(completionSeen = true) }
     }

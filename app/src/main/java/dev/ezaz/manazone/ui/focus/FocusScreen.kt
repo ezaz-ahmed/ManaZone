@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -42,8 +43,12 @@ import androidx.compose.ui.unit.min
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import dev.ezaz.manazone.core.TimeSnapshot
+import dev.ezaz.manazone.R
 import dev.ezaz.manazone.session.FocusSession
 import dev.ezaz.manazone.session.SessionTiming
 import dev.ezaz.manazone.ui.MainViewModel
@@ -62,10 +67,16 @@ import kotlinx.coroutines.delay
  */
 @Composable
 fun rememberTicker(now: () -> TimeSnapshot, enabled: Boolean = true): TimeSnapshot {
-    val state by produceState(now(), enabled) {
-        while (enabled) {
-            value = now()
-            delay(1000 - value.elapsedRealtimeMillis % 1000 + 5)
+    // Ticks only while the screen is visible; on return it re-reads the clock immediately.
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val state by produceState(now(), enabled, lifecycle) {
+        if (enabled) {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                while (true) {
+                    value = now()
+                    delay(1000 - value.elapsedRealtimeMillis % 1000 + 5)
+                }
+            }
         }
         value = now()
     }
@@ -157,16 +168,16 @@ private fun Completed(session: FocusSession, onDone: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("COMPLETE", style = MaterialTheme.typography.labelMedium, color = Mz.Emerald)
+        Text(stringResource(R.string.focus_complete), style = MaterialTheme.typography.labelMedium, color = Mz.Emerald)
         Spacer(Modifier.height(20.dp))
         Text(
             formatFocused(session.focusedMillis),
             style = DigitStyle.copy(fontSize = MaterialTheme.typography.displaySmall.fontSize * 1.6f, color = Mz.TextPrimary),
         )
         Spacer(Modifier.height(8.dp))
-        Text("focused", style = MaterialTheme.typography.bodyLarge, color = Mz.TextSecondary)
+        Text(stringResource(R.string.focus_focused), style = MaterialTheme.typography.bodyLarge, color = Mz.TextSecondary)
         Spacer(Modifier.height(48.dp))
-        QuietButton("Done", onClick = onDone, accent = Mz.Emerald)
+        QuietButton(stringResource(R.string.action_done), onClick = onDone, accent = Mz.Emerald)
     }
 }
 

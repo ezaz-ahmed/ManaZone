@@ -76,6 +76,15 @@ abstract class SessionDao {
     @Query("UPDATE sessions SET dndPreviousFilter = :previous, dndAppliedFilter = :applied WHERE id = :id")
     abstract suspend fun setDnd(id: Long, previous: Int, applied: Int)
 
+    @Query("UPDATE sessions SET dndPreviousFilter = NULL, dndAppliedFilter = NULL WHERE id = :id")
+    abstract suspend fun clearDnd(id: Long)
+
+    @Query("SELECT * FROM sessions WHERE status != 'ACTIVE' AND dndAppliedFilter IS NOT NULL")
+    abstract suspend fun finishedWithDnd(): List<SessionEntity>
+
+    @Query("UPDATE sessions SET dndPreviousFilter = NULL, dndAppliedFilter = NULL WHERE status != 'ACTIVE'")
+    abstract suspend fun clearFinishedDnd()
+
     @Query("UPDATE sessions SET completionSeen = 1 WHERE completionSeen = 0")
     abstract suspend fun markCompletionsSeen()
 }
@@ -112,6 +121,10 @@ class RoomSessionStore(private val dao: SessionDao) : SessionStore {
 
     override suspend fun setDnd(id: Long, dnd: DndOwnership) =
         dao.setDnd(id, dnd.previousFilter, dnd.appliedFilter)
+
+    override suspend fun clearDnd(id: Long) = dao.clearDnd(id)
+    override suspend fun finishedWithDnd() = dao.finishedWithDnd().map { it.toDomain() }
+    override suspend fun clearFinishedDnd() = dao.clearFinishedDnd()
 
     override suspend fun markCompletionsSeen() = dao.markCompletionsSeen()
 }

@@ -3,6 +3,7 @@ package dev.ezaz.manazone.session
 import android.util.Log
 import dev.ezaz.manazone.core.TimeSnapshot
 import dev.ezaz.manazone.core.TimeSource
+import dev.ezaz.manazone.dnd.DndOwnership
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -91,6 +92,22 @@ class SessionManager(
 
     suspend fun acknowledgeCompletion() = store.markCompletionsSeen()
 
+    /**
+     * Releases DND for finished sessions whose release never completed (e.g. the process died
+     * between finalizing and releasing). Safe to call any number of times.
+     */
+    suspend fun releaseOrphanedDnd() = mutex.withLock {
+        store.finishedWithDnd().forEach { s -> s.dnd?.let { releaseDnd(s.id, it) } }
+    }
+
+    /** Ownership is cleared only after a successful release, so a failed one is retried at next start. */
+    private suspend fun releaseDnd(id: Long, dnd: DndOwnership) {
+        runCatching {
+            guard.release(dnd)
+            store.clearDnd(id)
+        }.onFailure { log("DND release failed", it) }
+    }
+
     private suspend fun reconcileLocked(): FocusSession? {
         val session = store.active() ?: return null
         val now = time.now()
@@ -136,9 +153,7 @@ class SessionManager(
             completionSeen = completionSeen,
         )
         // Restore DND before any sound so the user's own settings decide whether it is audible.
-        session.dnd?.let { dnd ->
-            runCatching { guard.release(dnd) }.onFailure { log("DND release failed", it) }
-        }
+        session.dnd?.let { releaseDnd(session.id, it) }
         runCatching { effects.onFinished(finished, playFeedback) }.onFailure { log("onFinished failed", it) }
         return finished
     }

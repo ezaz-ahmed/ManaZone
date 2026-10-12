@@ -46,6 +46,9 @@ jobs:
           echo "MANAZONE_VERSION_NAME=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
           echo "MANAZONE_VERSION_CODE=${{ github.run_number }}" >> "$GITHUB_ENV"
 
+      - name: Run unit tests
+        run: ./gradlew :app:testDebugUnitTest
+
       - name: Build signed release APK
         env:
           MANAZONE_KEYSTORE_PASSWORD: ${{ secrets.MANAZONE_KEYSTORE_PASSWORD }}
