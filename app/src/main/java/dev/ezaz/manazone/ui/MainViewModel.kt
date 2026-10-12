@@ -149,6 +149,18 @@ class MainViewModel(
     fun setClockColor(argb: Int) = viewModelScope.launch { safely { container.preferences.setClockColor(argb) } }
     fun setClockWeight(weight: Int) = viewModelScope.launch { safely { container.preferences.setClockWeight(weight) } }
 
+    fun setClockStyle(style: String) = viewModelScope.launch { safely { container.preferences.setClockStyle(style) } }
+    fun setSoundId(id: String) = viewModelScope.launch { safely { container.preferences.setSoundId(id) } }
+    fun setSoundVolume(percent: Int) = viewModelScope.launch { safely { container.preferences.setSoundVolume(percent) } }
+
+    private var previewJob: kotlinx.coroutines.Job? = null
+
+    /** Plays a sound so the user can hear it while choosing; a new preview replaces the last one. */
+    fun previewSound(id: String, volumePercent: Int) {
+        previewJob?.cancel()
+        previewJob = container.appScope.launch { container.feedback.preview(id, volumePercent / 100f) }
+    }
+
     /** Returns true if the caller must first explain and open the system access screen. */
     fun requestDnd(enabled: Boolean): Boolean {
         if (enabled && !container.dndController.hasAccess()) {

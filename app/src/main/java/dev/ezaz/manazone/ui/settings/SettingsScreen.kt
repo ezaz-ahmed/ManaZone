@@ -30,6 +30,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
@@ -38,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -45,16 +48,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ezaz.manazone.R
 import dev.ezaz.manazone.presets.DurationInput
@@ -64,7 +66,9 @@ import dev.ezaz.manazone.presets.PresetRules
 import dev.ezaz.manazone.presets.formatDuration
 import dev.ezaz.manazone.ui.MainViewModel
 import dev.ezaz.manazone.ui.Route
-import dev.ezaz.manazone.ui.theme.DigitStyle
+import dev.ezaz.manazone.feedback.CompletionSound
+import dev.ezaz.manazone.ui.focus.ClockDisplay
+import dev.ezaz.manazone.ui.focus.ClockStyle
 import dev.ezaz.manazone.ui.theme.Mz
 import kotlin.math.roundToInt
 
@@ -132,15 +136,36 @@ fun SettingsScreen(vm: MainViewModel) {
         }
 
         Section("Clock")
-        Text(
-            "12:34",
-            style = DigitStyle.copy(
-                fontSize = 56.sp,
-                color = Color(settings.clockColor),
-                fontWeight = FontWeight(settings.clockWeight),
-            ),
-            modifier = Modifier.padding(horizontal = 8.dp).testTag("clockPreview"),
+        val clockStyle = ClockStyle.from(settings.clockStyle)
+        ClockDisplay(
+            text = "12:34",
+            style = clockStyle,
+            color = Color(settings.clockColor),
+            weight = settings.clockWeight,
+            modifier = Modifier.fillMaxWidth().height(96.dp),
+            widthFraction = 0.7f,
+            heightFraction = 0.9f,
+            contentModifier = Modifier.testTag("clockPreview"),
         )
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            ClockStyle.entries.forEach { option ->
+                val selected = option == clockStyle
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .heightIn(min = 44.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .border(if (selected) 2.dp else 1.dp, if (selected) Mz.Emerald else Mz.Hairline, RoundedCornerShape(12.dp))
+                        .clickable(role = Role.RadioButton, onClickLabel = "Use ${option.label} style") { vm.setClockStyle(option.name) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(option.label, style = MaterialTheme.typography.bodyMedium, color = if (selected) Mz.Emerald else Mz.TextSecondary)
+                }
+            }
+        }
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -169,7 +194,45 @@ fun SettingsScreen(vm: MainViewModel) {
 
         Section("Completion")
         ToggleRow("Vibration", "A short double pulse when a session completes", settings.vibrationEnabled, vm::setVibration)
-        ToggleRow("Sound", "A quiet ding-dong. Follows your ringer and Do Not Disturb settings.", settings.soundEnabled, vm::setSound)
+        ToggleRow("Sound", "Plays when a session completes. Follows your ringer and Do Not Disturb settings.", settings.soundEnabled, vm::setSound)
+        if (settings.soundEnabled) {
+            var volume by remember(settings.soundVolume) { mutableFloatStateOf(settings.soundVolume.toFloat()) }
+            Text("Volume", style = MaterialTheme.typography.bodyLarge, color = Mz.TextPrimary, modifier = Modifier.padding(start = 8.dp, top = 8.dp))
+            Slider(
+                value = volume,
+                onValueChange = { volume = it },
+                onValueChangeFinished = {
+                    vm.setSoundVolume(volume.roundToInt())
+                    vm.previewSound(settings.soundId, volume.roundToInt())
+                },
+                valueRange = 10f..100f,
+                colors = SliderDefaults.colors(thumbColor = Mz.Emerald, activeTrackColor = Mz.Emerald, inactiveTrackColor = Mz.Hairline),
+                modifier = Modifier.padding(horizontal = 8.dp).testTag("volumeSlider"),
+            )
+            Text("Tap a sound to choose and hear it", style = MaterialTheme.typography.bodyMedium, color = Mz.TextSecondary, modifier = Modifier.padding(horizontal = 8.dp))
+            CompletionSound.all.forEach { sound ->
+                val selected = sound.id == settings.soundId
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 52.dp)
+                        .clickable(role = Role.RadioButton) {
+                            vm.setSoundId(sound.id)
+                            vm.previewSound(sound.id, settings.soundVolume)
+                        }
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(
+                        selected = selected,
+                        onClick = null,
+                        colors = RadioButtonDefaults.colors(selectedColor = Mz.Emerald, unselectedColor = Mz.TextTertiary),
+                    )
+                    Spacer(Modifier.size(16.dp))
+                    Text(sound.name, style = MaterialTheme.typography.bodyLarge, color = if (selected) Mz.TextPrimary else Mz.TextSecondary)
+                }
+            }
+        }
 
         Section("Do Not Disturb")
         ToggleRow(

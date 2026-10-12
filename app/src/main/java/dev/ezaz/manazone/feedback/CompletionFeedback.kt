@@ -11,9 +11,6 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.util.Log
 import kotlinx.coroutines.delay
-import kotlin.math.PI
-import kotlin.math.exp
-import kotlin.math.sin
 
 /**
  * The one-shot completion cue: a short double vibration and/or a soft synthesized "ding-dong".
@@ -22,9 +19,15 @@ import kotlin.math.sin
 class CompletionFeedback(private val context: Context) {
 
     /** Plays the enabled cues and suspends until the sound (if any) has finished. */
-    suspend fun play(vibrate: Boolean, sound: Boolean) {
+    suspend fun play(vibrate: Boolean, sound: Boolean, soundId: String, volume: Float) {
         if (vibrate) runCatching { vibrate() }.onFailure { Log.w(TAG, "Vibration failed", it) }
-        if (sound) runCatching { playDingDong() }.onFailure { Log.w(TAG, "Sound failed", it) }
+        if (sound) preview(soundId, volume)
+    }
+
+    /** Plays one sound at the given volume (0..1); used for completion and for previews in Settings. */
+    suspend fun preview(soundId: String, volume: Float) {
+        runCatching { playPcm(CompletionSound.byId(soundId).render(volume)) }
+            .onFailure { if (it is kotlinx.coroutines.CancellationException) throw it else Log.w(TAG, "Sound failed", it) }
     }
 
     private fun vibrate() {
@@ -44,8 +47,7 @@ class CompletionFeedback(private val context: Context) {
         }
     }
 
-    private suspend fun playDingDong() {
-        val pcm = synthesizeDingDong()
+    private suspend fun playPcm(pcm: ShortArray) {
         val track = AudioTrack.Builder()
             .setAudioAttributes(
                 // Notification-event usage respects silent mode and the user's own DND rules.
@@ -75,29 +77,6 @@ class CompletionFeedback(private val context: Context) {
 
     companion object {
         private const val TAG = "CompletionFeedback"
-        private const val SAMPLE_RATE = 22_050
-
-        /** Two soft bell tones (E5 then C5) with exponential decay. */
-        fun synthesizeDingDong(): ShortArray {
-            val total = (SAMPLE_RATE * 1.9).toInt()
-            val out = ShortArray(total)
-            fun bell(freq: Double, startSec: Double, lengthSec: Double) {
-                val start = (startSec * SAMPLE_RATE).toInt()
-                val length = (lengthSec * SAMPLE_RATE).toInt()
-                for (i in 0 until length) {
-                    val idx = start + i
-                    if (idx >= total) break
-                    val t = i.toDouble() / SAMPLE_RATE
-                    val attack = (t / 0.008).coerceAtMost(1.0)
-                    val env = attack * exp(-t * 3.2)
-                    val tone = sin(2 * PI * freq * t) + 0.25 * sin(2 * PI * freq * 2.0 * t)
-                    val mixed = out[idx] + (tone * env * 0.28 * Short.MAX_VALUE / 1.25)
-                    out[idx] = mixed.toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
-                }
-            }
-            bell(659.25, 0.0, 1.2)
-            bell(523.25, 0.55, 1.35)
-            return out
-        }
+        private const val SAMPLE_RATE = CompletionSound.SAMPLE_RATE
     }
 }

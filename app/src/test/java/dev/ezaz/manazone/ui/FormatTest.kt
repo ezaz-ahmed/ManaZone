@@ -1,6 +1,6 @@
 package dev.ezaz.manazone.ui
 
-import dev.ezaz.manazone.feedback.CompletionFeedback
+import dev.ezaz.manazone.feedback.CompletionSound
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -26,7 +26,7 @@ class FormatTest {
 
     @Test
     fun `ding-dong is short, non-silent and does not clip`() {
-        val pcm = CompletionFeedback.synthesizeDingDong()
+        val pcm = CompletionSound.byId(CompletionSound.DEFAULT_ID).render(0.8f)
         assertTrue(pcm.size in 20_000..60_000)
         val peak = pcm.maxOf { kotlin.math.abs(it.toInt()) }
         assertTrue(peak in 2_000 until Short.MAX_VALUE.toInt())

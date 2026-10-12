@@ -23,6 +23,11 @@ data class UserSettings(
     val clockColor: Int = DEFAULT_CLOCK_COLOR,
     /** Font weight (100..900) of the countdown digits. */
     val clockWeight: Int = DEFAULT_CLOCK_WEIGHT,
+    /** Name of a [dev.ezaz.manazone.ui.focus.ClockStyle]. */
+    val clockStyle: String = "CLASSIC",
+    val soundId: String = "ding_dong",
+    /** Completion sound loudness, 10..100 percent. */
+    val soundVolume: Int = 80,
 )
 
 const val DEFAULT_CLOCK_COLOR = 0xFF34C48B.toInt()
@@ -50,6 +55,9 @@ class PreferencesRepository(context: Context) {
             dndEnabled = prefs[DND] ?: false,
             clockColor = prefs[CLOCK_COLOR] ?: DEFAULT_CLOCK_COLOR,
             clockWeight = (prefs[CLOCK_WEIGHT] ?: DEFAULT_CLOCK_WEIGHT).coerceIn(100, 900),
+            clockStyle = prefs[CLOCK_STYLE] ?: "CLASSIC",
+            soundId = prefs[SOUND_ID] ?: "ding_dong",
+            soundVolume = (prefs[SOUND_VOLUME] ?: 80).coerceIn(10, 100),
         )
     }
 
@@ -66,6 +74,10 @@ class PreferencesRepository(context: Context) {
     suspend fun setClockColor(argb: Int) = store.edit { it[CLOCK_COLOR] = argb }
     suspend fun setClockWeight(weight: Int) = store.edit { it[CLOCK_WEIGHT] = weight.coerceIn(100, 900) }
 
+    suspend fun setClockStyle(style: String) = store.edit { it[CLOCK_STYLE] = style }
+    suspend fun setSoundId(id: String) = store.edit { it[SOUND_ID] = id }
+    suspend fun setSoundVolume(percent: Int) = store.edit { it[SOUND_VOLUME] = percent.coerceIn(10, 100) }
+
     suspend fun clear() = store.edit { it.clear() }
 
     private companion object {
@@ -75,5 +87,8 @@ class PreferencesRepository(context: Context) {
         val DND = booleanPreferencesKey("dnd_enabled")
         val CLOCK_COLOR = intPreferencesKey("clock_color")
         val CLOCK_WEIGHT = intPreferencesKey("clock_weight")
+        val CLOCK_STYLE = stringPreferencesKey("clock_style")
+        val SOUND_ID = stringPreferencesKey("completion_sound_id")
+        val SOUND_VOLUME = intPreferencesKey("completion_sound_volume")
     }
 }

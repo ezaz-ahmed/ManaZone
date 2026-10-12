@@ -3,6 +3,7 @@ package dev.ezaz.manazone.ui.focus
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -124,36 +125,28 @@ private fun Countdown(session: FocusSession, vm: MainViewModel) {
     BoxWithConstraints(Modifier.fillMaxSize().safeDrawingPadding()) {
         val landscape = maxWidth > maxHeight
         val text = formatCountdown(remaining)
-        // Size digits from the space available: wide enough for the text, and never taller than
-        // about half (portrait) or 60% (landscape) of the screen.
-        val charWidthEm = 0.56f
-        val byWidth = maxWidth * 0.88f / (text.length * charWidthEm)
-        val byHeight = maxHeight * (if (landscape) 0.55f else 0.28f)
-        val digitSize: Dp = min(byWidth, byHeight)
-        val fontSize = with(LocalDensity.current) { digitSize.toSp() }
 
-        // Shift the static digits by a few dp each minute to spread OLED wear.
-        val minute = (SessionTiming.rawElapsedMillis(session, now) / 60_000).toInt()
-        val shiftX = (((minute * 7) % 9) - 4).dp
-        val shiftY = (((minute * 5) % 9) - 4).dp
+        // Drift the static digits to a new spot every 30s (slowly, so it isn't distracting) to spread
+        // OLED wear. Horizontal range stays inside the margin left by the 88% width cap.
+        val step = (SessionTiming.rawElapsedMillis(session, now) / 30_000).toInt()
+        val maxX = ((maxWidth * 0.06f) - 2.dp).coerceAtLeast(0.dp)
+        val maxY = if (landscape) 24.dp else 56.dp
+        val shiftX by animateDpAsState(maxX * ((((step * 37) % 21) - 10) / 10f), tween(3000), label = "shiftX")
+        val shiftY by animateDpAsState(maxY * ((((step * 23) % 21) - 10) / 10f), tween(3000), label = "shiftY")
 
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(
-                text,
-                style = DigitStyle.copy(
-                    fontSize = fontSize,
-                    lineHeight = fontSize,
-                    color = Color(settings.clockColor),
-                    fontWeight = FontWeight(settings.clockWeight),
-                ),
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                modifier = Modifier
-                    .offset(shiftX, shiftY)
-                    .testTag("countdown")
-                    .semantics { contentDescription = "${formatCountdown(remaining)} remaining" },
-            )
-        }
+        // Digits are sized from the space available: wide enough for the text, and never taller than
+        // about 28% (portrait) or 55% (landscape) of the screen.
+        ClockDisplay(
+            text = text,
+            style = ClockStyle.from(settings.clockStyle),
+            color = Color(settings.clockColor),
+            weight = settings.clockWeight,
+            heightFraction = if (landscape) 0.55f else 0.28f,
+            contentModifier = Modifier
+                .offset(shiftX, shiftY)
+                .testTag("countdown")
+                .semantics { contentDescription = "${formatCountdown(remaining)} remaining" },
+        )
     }
 }
 

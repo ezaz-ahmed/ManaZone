@@ -53,7 +53,7 @@ class AppContainer(context: Context) {
     val preferences = PreferencesRepository(appContext)
     val dndController: DndController = AndroidDndController(appContext)
     private val alarms = CompletionAlarmScheduler(appContext)
-    private val feedback = CompletionFeedback(appContext)
+    val feedback = CompletionFeedback(appContext)
     private val notification = SessionNotification(appContext)
 
     private val effects = object : SessionEffects {
@@ -69,7 +69,7 @@ class AppContainer(context: Context) {
             refreshWidgets()
             if (playCompletionFeedback && session.status == SessionStatus.COMPLETED) {
                 val settings = preferences.currentSettings()
-                appScope.launch { feedback.play(settings.vibrationEnabled, settings.soundEnabled) }
+                appScope.launch { feedback.play(settings.vibrationEnabled, settings.soundEnabled, settings.soundId, settings.soundVolume / 100f) }
             }
         }
     }
