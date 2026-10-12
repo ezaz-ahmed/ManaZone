@@ -112,22 +112,40 @@ class FocusWidgetTest {
 
     @Test
     fun widgetTapStartsTheSessionAndRepeatedTapsDoNotDuplicate() {
-        ActivityScenario.launch<MainActivity>(FocusWidget.launchIntent(app, 25)).use {
+        ActivityScenario.launch<MainActivity>(widgetIntent(25)).use {
             compose.waitUntilAtLeastOneExists(hasTestTag("countdown"), 5_000)
             compose.onNodeWithText("25 MIN FOCUS").assertExists()
 
             // A second widget (different duration) tapped while the session runs.
-            app.startActivity(FocusWidget.launchIntent(app, 60))
+            app.startActivity(widgetIntent(60))
             Thread.sleep(1_500)
             compose.waitUntilAtLeastOneExists(hasTestTag("countdown"), 5_000)
             compose.onNodeWithText("25 MIN FOCUS").assertExists()
-            app.startActivity(FocusWidget.launchIntent(app, 25))
+            app.startActivity(widgetIntent(25))
             Thread.sleep(1_500)
 
             val sessions = allSessions()
             assertEquals(1, sessions.size)
             assertEquals(25 * 60_000L, sessions.single().plannedMillis)
             assertEquals("ACTIVE", sessions.single().status)
+        }
+    }
+
+    private fun widgetIntent(minutes: Int): Intent = runBlocking {
+        FocusWidget.launchIntent(app, minutes, app.container.preferences.startToken())
+    }
+
+    @Test
+    fun intentWithoutTheInstallTokenDoesNotStartASession() {
+        val forged = widgetIntent(25).apply { removeExtra(MainActivity.EXTRA_TOKEN) }
+        ActivityScenario.launch<MainActivity>(forged).use {
+            Thread.sleep(1_500)
+            assertEquals(0, allSessions().size)
+        }
+        val wrong = widgetIntent(25).apply { putExtra(MainActivity.EXTRA_TOKEN, "guess") }
+        ActivityScenario.launch<MainActivity>(wrong).use {
+            Thread.sleep(1_500)
+            assertEquals(0, allSessions().size)
         }
     }
 

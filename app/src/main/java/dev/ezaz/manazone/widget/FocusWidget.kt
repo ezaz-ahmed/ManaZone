@@ -53,17 +53,18 @@ class FocusWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val container = (context.applicationContext as ManazoneApp).container
+        val token = container.preferences.startToken()
         val focusing = runCatching {
             container.sessionStore.active()?.let { !SessionTiming.isElapsed(it, container.time.now()) } ?: false
         }.getOrDefault(false)
         provideContent {
             val minutes = currentState<Preferences>()[MINUTES_KEY]
-            WidgetContent(context, minutes, focusing)
+            WidgetContent(context, minutes, focusing, token)
         }
     }
 
     @Composable
-    private fun WidgetContent(context: Context, minutes: Int?, focusing: Boolean) {
+    private fun WidgetContent(context: Context, minutes: Int?, focusing: Boolean, token: String) {
         val background = if (focusing) R.drawable.widget_background_active else R.drawable.widget_background
         val (value, unit) = minutes?.let(::compactDuration) ?: ("–" to "set")
         val description = when {
@@ -76,7 +77,7 @@ class FocusWidget : GlanceAppWidget() {
                 .fillMaxSize()
                 .background(ImageProvider(background))
                 .padding(4.dp)
-                .clickable(actionStartActivity(launchIntent(context, minutes)))
+                .clickable(actionStartActivity(launchIntent(context, minutes, token)))
                 .semantics { contentDescription = description },
             verticalAlignment = Alignment.CenterVertically,
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -103,11 +104,12 @@ class FocusWidget : GlanceAppWidget() {
         private val EMERALD = Color(0xFF34C48B)
         private val MUTED = Color(0xFF8A8F8C)
 
-        fun launchIntent(context: Context, minutes: Int?): Intent =
+        fun launchIntent(context: Context, minutes: Int?, token: String): Intent =
             Intent(context, MainActivity::class.java).apply {
                 if (minutes != null) {
                     action = MainActivity.ACTION_START_FOCUS
                     putExtra(MainActivity.EXTRA_MINUTES, minutes)
+                    putExtra(MainActivity.EXTRA_TOKEN, token)
                     // Unique data keeps PendingIntents for different durations distinct.
                     data = "manazone://focus/$minutes".toUri()
                 }

@@ -13,6 +13,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
+import java.security.MessageDigest
 import kotlinx.coroutines.launch
 import dev.ezaz.manazone.session.SessionManager
 import dev.ezaz.manazone.ui.MainViewModel
@@ -65,11 +66,19 @@ class MainActivity : ComponentActivity() {
         // Relaunching from Recents re-delivers the original widget intent; don't start again.
         if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return
         val minutes = intent.getIntExtra(EXTRA_MINUTES, 0)
-        if (minutes in SessionManager.MIN_MINUTES..SessionManager.MAX_MINUTES) vm.startFocus(minutes)
+        if (minutes !in SessionManager.MIN_MINUTES..SessionManager.MAX_MINUTES) return
+        // MainActivity is exported for the launcher, so only intents carrying this install's token may start a session.
+        val token = intent.getStringExtra(EXTRA_TOKEN) ?: return
+        val preferences = (application as ManazoneApp).container.preferences
+        lifecycleScope.launch {
+            val expected = preferences.startToken()
+            if (MessageDigest.isEqual(token.toByteArray(), expected.toByteArray())) vm.startFocus(minutes)
+        }
     }
 
     companion object {
         const val ACTION_START_FOCUS = "dev.ezaz.manazone.action.START_FOCUS"
         const val EXTRA_MINUTES = "minutes"
+        const val EXTRA_TOKEN = "token"
     }
 }

@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.io.IOException
+import java.util.UUID
 
 data class UserSettings(
     val vibrationEnabled: Boolean = true,
@@ -84,6 +85,16 @@ class PreferencesRepository(context: Context) {
     suspend fun dndOrphanScanReady(): Boolean = data.first()[DND_SCAN_READY] ?: false
     suspend fun setDndOrphanScanReady() = store.edit { it[DND_SCAN_READY] = true }
 
+    /** Per-install secret that widget intents carry so only this app can start a session by intent. */
+    suspend fun startToken(): String {
+        data.first()[START_TOKEN]?.let { return it }
+        var token = ""
+        store.edit { prefs ->
+            token = prefs[START_TOKEN] ?: UUID.randomUUID().toString().also { prefs[START_TOKEN] = it }
+        }
+        return token
+    }
+
     suspend fun clear() = store.edit { it.clear() }
 
     private companion object {
@@ -97,6 +108,7 @@ class PreferencesRepository(context: Context) {
         val SOUND_ID = stringPreferencesKey("completion_sound_id")
         val SOUND_VOLUME = intPreferencesKey("completion_sound_volume")
         val DND_SCAN_READY = booleanPreferencesKey("dnd_orphan_scan_ready")
+        val START_TOKEN = stringPreferencesKey("start_token")
         val NOTIFICATION_ASKED = booleanPreferencesKey("notification_permission_asked")
     }
 }
