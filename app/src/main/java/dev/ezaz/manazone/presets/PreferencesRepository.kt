@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import dev.ezaz.manazone.ui.focus.ClockStyle
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
@@ -25,7 +26,7 @@ data class UserSettings(
     /** Font weight (100..900) of the countdown digits. */
     val clockWeight: Int = DEFAULT_CLOCK_WEIGHT,
     /** Name of a [dev.ezaz.manazone.ui.focus.ClockStyle]. */
-    val clockStyle: String = "CLAY",
+    val clockStyle: String = ClockStyle.Default.name,
     val soundId: String = "ding_dong",
     /** Completion sound loudness, 10..100 percent. */
     val soundVolume: Int = 80,
@@ -58,7 +59,7 @@ class PreferencesRepository(context: Context) {
             dndEnabled = prefs[DND] ?: false,
             clockColor = prefs[CLOCK_COLOR] ?: DEFAULT_CLOCK_COLOR,
             clockWeight = (prefs[CLOCK_WEIGHT] ?: DEFAULT_CLOCK_WEIGHT).coerceIn(100, 900),
-            clockStyle = prefs[CLOCK_STYLE] ?: "CLAY",
+            clockStyle = prefs[CLOCK_STYLE] ?: ClockStyle.Default.name,
             soundId = prefs[SOUND_ID] ?: "ding_dong",
             soundVolume = (prefs[SOUND_VOLUME] ?: 80).coerceIn(10, 100),
             oledProtection = prefs[OLED_PROTECTION] ?: true,

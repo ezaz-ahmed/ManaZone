@@ -12,6 +12,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -84,6 +86,7 @@ private val CLOCK_COLORS = listOf(
     0xFF34C48B, 0xFFE6E9E7, 0xFF4FC3F7, 0xFFFFB74D, 0xFFE57373, 0xFFBA68C8, 0xFFFFF176,
 ).map { it.toInt() }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(vm: MainViewModel) {
     val presets by vm.presets.collectAsStateWithLifecycle()
@@ -156,9 +159,11 @@ fun SettingsScreen(vm: MainViewModel) {
             heightFraction = 0.9f,
             contentModifier = Modifier.testTag("clockPreview"),
         )
-        Row(
+        FlowRow(
             Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            maxItemsInEachRow = 3,
         ) {
             ClockStyle.entries.forEach { option ->
                 val selected = option == clockStyle
@@ -175,9 +180,10 @@ fun SettingsScreen(vm: MainViewModel) {
                 }
             }
         }
-        Row(
+        FlowRow(
             Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             CLOCK_COLORS.forEach { argb ->
                 val selected = argb == settings.clockColor

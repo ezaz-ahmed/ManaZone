@@ -8,9 +8,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalDensity
@@ -24,7 +31,10 @@ import dev.ezaz.manazone.ui.theme.DigitStyle
 
 /** Look of the countdown digits. [weight] (thickness) applies to every style. */
 enum class ClockStyle(val label: String) {
-    /** Soft, inflated digits with a lit top edge and a darker underside, like modelling clay. */
+    /** Soft curved digits in one flat color with no shading. */
+    FLAT("Flat"),
+
+    /** The same curved digits, inflated with a lit top edge and a darker underside, like modelling clay. */
     CLAY("Clay"),
     CLASSIC("Classic"),
     MONO("Mono"),
@@ -33,10 +43,10 @@ enum class ClockStyle(val label: String) {
     /** Seven-segment display with the unlit segments faintly visible, like an LCD. */
     LCD("LCD");
 
-    val isSegment: Boolean get() = this == SEGMENT || this == LCD || this == CLAY
+    val isSegment: Boolean get() = this == SEGMENT || this == LCD || this == CLAY || this == FLAT
 
     companion object {
-        val Default = CLAY
+        val Default = FLAT
 
         fun from(name: String?): ClockStyle = entries.firstOrNull { it.name == name } ?: Default
     }
@@ -63,8 +73,11 @@ fun ClockDisplay(
             val units = segmentWidthUnits(text)
             val h = min(maxWidth * widthFraction / units, maxHeight * heightFraction * 0.8f)
             Canvas(contentModifier.size(h * units, h)) {
-                if (style == ClockStyle.CLAY) drawClay(text, color, weight)
-                else drawSegments(text, color, weight, ghost = style == ClockStyle.LCD)
+                when (style) {
+                    ClockStyle.CLAY -> drawCurved(text, color, weight, shaded = true)
+                    ClockStyle.FLAT -> drawCurved(text, color, weight, shaded = false)
+                    else -> drawSegments(text, color, weight, ghost = style == ClockStyle.LCD)
+                }
             }
         } else {
             val charWidthEm = if (style == ClockStyle.MONO) 0.62f else 0.56f
@@ -151,14 +164,14 @@ private fun digitSegmentLines(x: Float, w: Float, h: Float, t: Float, g: Float):
  * across the whole text (underside, body, diffuse light, specular) so overlapping tubes read as one
  * piece of clay instead of separate bars.
  */
-private fun DrawScope.drawClay(text: String, color: Color, weight: Int) {
+private fun DrawScope.drawCurved(text: String, color: Color, weight: Int, shaded: Boolean) {
     val h = size.height
-    val t = h * (0.13f + 0.09f * (weight.coerceIn(100, 900) - 100) / 800f)
+    val t = h * (0.10f + 0.07f * (weight.coerceIn(100, 900) - 100) / 800f)
     val shade = lerp(color, Color.Black, 0.5f)
-    val light = lerp(color, Color.White, 0.5f).copy(alpha = 0.45f)
-    val spec = Color.White.copy(alpha = 0.5f)
+    val lightSoft = lerp(color, Color.White, 0.5f).copy(alpha = 0.11f)
+    val specSoft = Color.White.copy(alpha = 0.14f)
 
-    val lines = ArrayList<Pair<Offset, Offset>>()
+    val glyphs = Path()
     val balls = ArrayList<Offset>()
     var x = 0f
     for (ch in text) {
@@ -168,19 +181,86 @@ private fun DrawScope.drawClay(text: String, color: Color, weight: Int) {
             balls += Offset(cx, h * 0.68f)
             x += (COLON_W + GAP) * h
         } else {
-            val lit = ch.digitToIntOrNull()?.let { DIGIT_SEGMENTS[it] } ?: ""
-            digitSegmentLines(x, DIGIT_W * h, h, t, t * 0.45f).forEach { (name, line) -> if (name in lit) lines += line }
+            ch.digitToIntOrNull()?.let { addClayDigit(glyphs, it, x + t / 2, x + DIGIT_W * h - t / 2, t / 2, h - t / 2) }
             x += (DIGIT_W + GAP) * h
         }
     }
 
     fun layer(width: Float, dx: Float, dy: Float, c: Color) {
-        val shift = Offset(dx * t, dy * t)
-        for ((a, b) in lines) drawLine(c, a + shift, b + shift, strokeWidth = t * width, cap = StrokeCap.Round)
-        for (p in balls) drawCircle(c, t * width * 0.62f, p + shift)
+        translate(dx * t, dy * t) {
+            drawPath(glyphs, c, style = Stroke(t * width, cap = StrokeCap.Round, join = StrokeJoin.Round))
+            for (p in balls) drawCircle(c, t * width * 0.62f, p)
+        }
+    }
+    if (!shaded) {
+        layer(1f, 0f, 0f, color)
+        return
     }
     layer(1.0f, 0.10f, 0.14f, shade)
     layer(0.94f, 0f, 0f, color)
-    layer(0.50f, -0.10f, -0.13f, light)
-    layer(0.16f, -0.16f, -0.20f, spec)
+    // Highlights are stacks of thin translucent layers so they fade out instead of ending in a hard line.
+    for (i in 0 until 5) {
+        val f = i / 4f
+        layer(0.78f - 0.36f * f, -0.10f * (0.4f + 0.6f * f), -0.13f * (0.4f + 0.6f * f), lightSoft)
+    }
+    for (i in 0 until 4) {
+        val f = i / 3f
+        layer(0.34f - 0.20f * f, -0.16f, -0.20f, specSoft)
+    }
+}
+
+/** Adds the centre line of digit [d] to [path], inside the box [xl]..[xr] x [yt]..[yb], as smooth curves. */
+private fun addClayDigit(path: Path, d: Int, xl: Float, xr: Float, yt: Float, yb: Float) {
+    val w = xr - xl
+    val h = yb - yt
+    val ym = yt + h / 2
+    val cx = xl + w / 2
+    when (d) {
+        0 -> path.addRoundRect(RoundRect(xl, yt, xr, yb, CornerRadius(w / 2)))
+        1 -> {
+            path.moveTo(xl + 0.1f * w, yt + 0.2f * h)
+            path.lineTo(cx + 0.15f * w, yt)
+            path.lineTo(cx + 0.15f * w, yb)
+        }
+        2 -> {
+            path.arcTo(Rect(xl, yt, xr, yt + w), 180f, 215f, true)
+            path.lineTo(xl, yb)
+            path.lineTo(xr, yb)
+        }
+        3 -> {
+            path.arcTo(Rect(xl + 0.04f * w, yt, xr, ym), 200f, 250f, true)
+            path.arcTo(Rect(xl, ym, xr, yb), 270f, 250f, false)
+        }
+        4 -> {
+            path.moveTo(xr - 0.28f * w, yb)
+            path.lineTo(xr - 0.28f * w, yt)
+            path.lineTo(xl, yt + 0.66f * h)
+            path.lineTo(xr, yt + 0.66f * h)
+        }
+        5 -> {
+            path.moveTo(xr, yt)
+            path.lineTo(xl + 0.1f * w, yt)
+            path.lineTo(xl + 0.05f * w, yt + 0.45f * h)
+            path.arcTo(Rect(xl, yt + 0.4f * h, xr, yb), 235f, 285f, false)
+        }
+        6 -> {
+            path.addOval(Rect(xl, yt + 0.4f * h, xr, yb))
+            path.moveTo(xr - 0.05f * w, yt + 0.08f * h)
+            path.cubicTo(xr - 0.3f * w, yt, xl, yt + 0.2f * h, xl, yt + 0.6f * h)
+        }
+        7 -> {
+            path.moveTo(xl, yt)
+            path.lineTo(xr, yt)
+            path.lineTo(xl + 0.3f * w, yb)
+        }
+        8 -> {
+            path.addOval(Rect(xl + 0.06f * w, yt, xr - 0.06f * w, ym))
+            path.addOval(Rect(xl, ym, xr, yb))
+        }
+        9 -> {
+            path.addOval(Rect(xl, yt, xr, yt + 0.6f * h))
+            path.moveTo(xl + 0.05f * w, yb - 0.08f * h)
+            path.cubicTo(xl + 0.3f * w, yb, xr, yb - 0.2f * h, xr, yb - 0.6f * h)
+        }
+    }
 }
